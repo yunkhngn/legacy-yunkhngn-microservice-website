@@ -44,7 +44,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - FRONTEND_URL=https://yunkhngn.dev
-      - LETTER_AI_URL=http://letter-ai:8000
+      - LETTER_AI_URL=http://ai-service:8000
       - SELF_URL=http://backend:3001
     ports:
       - "3001:3001"
@@ -54,11 +54,11 @@ services:
       - ./firebase-admin-sdk.json:/app/firebase-admin-sdk.json
     depends_on:
       - mssql
-      - letter-ai
+      - ai-service
 
-  letter-ai:
-    image: ghcr.io/yunkhngn/yunkhngn-ai:latest
-    container_name: yunkhngn-letter-ai
+  ai-service:
+    image: ghcr.io/yunkhngn/yunkhngn-ai-service:latest
+    container_name: yunkhngn-ai-service
     restart: always
     env_file:
       - ./env-ai
