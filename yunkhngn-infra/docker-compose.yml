@@ -57,7 +57,7 @@ services:
       - letter-ai
 
   letter-ai:
-    image: ghcr.io/yunkhngn/yunkhngn-letter-ai:latest
+    image: ghcr.io/yunkhngn/yunkhngn-ai:latest
     container_name: yunkhngn-letter-ai
     restart: always
     env_file:
