@@ -44,7 +44,7 @@ docker exec -u 0 $CONTAINER_NAME chown mssql:root /var/opt/mssql/data/blogdb.mdf
 
 echo "Attaching Database (SQL Server 2022)..."
 docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd \
-   -S localhost -U sa -P 'YourStrong@Passw0rd' \
+   -S localhost -U sa -P 'Khoadeptrai1204' \
    -Q "CREATE DATABASE [blogdb] ON (FILENAME = '/var/opt/mssql/data/blogdb.mdf'), (FILENAME = '/var/opt/mssql/data/blogdb_log.ldf') FOR ATTACH"
 
 echo "Restarting services..."

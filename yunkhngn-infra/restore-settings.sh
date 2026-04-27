@@ -12,7 +12,7 @@ cp restore_settings_only.sql backups/
 
 echo "Running SQL commands..."
 docker exec -it $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd \
-   -S localhost -U sa -P 'YourStrong@Passw0rd' \
+   -S localhost -U sa -P 'YourStrongPassword' \
    -i "$SQL_FILE"
 
 if [ $? -eq 0 ]; then
