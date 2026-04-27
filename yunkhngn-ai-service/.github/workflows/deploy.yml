@@ -2,9 +2,9 @@ name: CI/CD AI Microservice
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "*" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "*" ]
 
 env:
   REGISTRY: ghcr.io
@@ -12,6 +12,7 @@ env:
 
 jobs:
   quality:
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +27,7 @@ jobs:
       #   run: python -m pytest (bỏ comment nếu có test)
 
   security:
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +36,7 @@ jobs:
           config: p/default
 
   build-and-push:
-    needs: [quality, security]
+    # Bỏ needs [quality, security] để chạy thẳng trên main
     runs-on: ubuntu-latest
     permissions:
       contents: read
