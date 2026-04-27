@@ -4,11 +4,11 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SettingsService } from '../../settings/settings.service';
+import { SettingsService } from '../../modules/settings/settings.service';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private settingsService: SettingsService) {}
+  constructor(private settingsService: SettingsService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
