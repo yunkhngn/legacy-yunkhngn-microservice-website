@@ -16,5 +16,6 @@ import { PrismaModule } from '../../../database/prisma/prisma.module';
       useClass: PrismaSubscriberRepository,
     },
   ],
+  exports: [NewsletterService],
 })
-export class NewsletterModule {}
+export class NewsletterModule { }
