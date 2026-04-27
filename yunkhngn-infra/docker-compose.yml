@@ -7,7 +7,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker/config.json:/config.json
     environment:
-      - DOCKER_API_VERSION=1.41
+      - DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.41}
     command: --interval 60 --cleanup
     restart: unless-stopped
 
@@ -26,7 +26,7 @@ services:
     restart: always
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=Khoadeptrai1204!
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
     volumes:
       - mssql_data:/var/opt/mssql
       - ./backups:/var/opt/mssql/backups
