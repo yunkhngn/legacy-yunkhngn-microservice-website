@@ -17,6 +17,6 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
       useClass: PrismaBlogRepository,
     },
   ],
-  exports: [BlogService],
+  exports: [BlogService, IBlogRepository],
 })
 export class BlogModule {}
