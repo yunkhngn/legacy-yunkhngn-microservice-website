@@ -9,6 +9,7 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JournalService } from './journal.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
@@ -16,11 +17,14 @@ import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
 import { User } from '../auth/user.decorator';
 
+@ApiTags('Journal')
 @Controller('journals')
 export class JournalController {
   constructor(private readonly journalService: JournalService) { }
 
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new journal entry' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   create(@Body() createJournalDto: CreateJournalDto) {
@@ -28,6 +32,9 @@ export class JournalController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all journal entries' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
   findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     return this.journalService.findAll(
       page ? parseInt(page, 10) || 1 : 1,
@@ -36,11 +43,14 @@ export class JournalController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get journal entry by ID' })
   findOne(@Param('id') id: string) {
     return this.journalService.findOne(id);
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a journal entry' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   update(@Param('id') id: string, @Body() updateJournalDto: UpdateJournalDto) {
@@ -48,6 +58,8 @@ export class JournalController {
   }
 
   @Post(':id/reactions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Toggle reaction on a journal entry' })
   @UseGuards(FirebaseAuthGuard)
   toggleReaction(
     @Param('id') id: string,
@@ -59,6 +71,8 @@ export class JournalController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a journal entry' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   remove(@Param('id') id: string) {

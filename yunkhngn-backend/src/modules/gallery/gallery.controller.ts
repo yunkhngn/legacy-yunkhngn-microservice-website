@@ -9,16 +9,20 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
 
+@ApiTags('Gallery')
 @Controller('gallery')
 export class GalleryController {
   constructor(private readonly galleryService: GalleryService) { }
 
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a new photo to the gallery' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   create(@Body() createGalleryDto: CreateGalleryDto) {
@@ -26,6 +30,11 @@ export class GalleryController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all photos from gallery' })
+  @ApiQuery({ name: 'albumId', required: false })
+  @ApiQuery({ name: 'tag', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
   findAll(
     @Query('albumId') albumId?: string,
     @Query('tag') tag?: string,
@@ -41,11 +50,14 @@ export class GalleryController {
   }
 
   @Get('tags')
+  @ApiOperation({ summary: 'Get all unique tags from gallery' })
   getAllTags() {
     return this.galleryService.getAllTags();
   }
 
   @Get('signature')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Cloudinary upload signature' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   getSignature(@Query() query: Record<string, string>) {
@@ -53,16 +65,20 @@ export class GalleryController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get photo by ID' })
   findById(@Param('id') id: string) {
     return this.galleryService.findById(id);
   }
 
   @Post('views/:id')
+  @ApiOperation({ summary: 'Increment photo views' })
   incrementViews(@Param('id') id: string) {
     return this.galleryService.incrementViews(id);
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update photo details' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   update(
@@ -83,6 +99,8 @@ export class GalleryController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete photo from gallery' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   remove(@Param('id') id: string) {
@@ -90,6 +108,8 @@ export class GalleryController {
   }
 
   @Post('reorder')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reorder photos in gallery' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   reorder(@Body() body: { items: { id: string; sortOrder: number }[] }) {
@@ -97,6 +117,8 @@ export class GalleryController {
   }
 
   @Post('bulk-update')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk update photo details' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   bulkUpdate(

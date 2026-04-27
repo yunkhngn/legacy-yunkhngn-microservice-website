@@ -8,10 +8,12 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PhotoReactionsService } from './photo-reactions.service';
 import { FirebaseAuthGuard } from '../../common/guards';
 import { PhotoReaction } from '@prisma/client';
+import { CreateReactionDto } from './dto/create-reaction.dto';
 
 interface RequestWithUser extends Request {
   user?: {
@@ -19,13 +21,14 @@ interface RequestWithUser extends Request {
   };
 }
 
-import { CreateReactionDto } from './dto/create-reaction.dto';
-
+@ApiTags('Photo Reactions')
 @Controller('photo-reactions')
 export class PhotoReactionsController {
   constructor(private readonly photoReactionsService: PhotoReactionsService) { }
 
   @Post(':photoId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add or update a reaction to a photo' })
   @UseGuards(FirebaseAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute
   async addReaction(
@@ -57,6 +60,8 @@ export class PhotoReactionsController {
   }
 
   @Delete(':photoId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a reaction from a photo' })
   @UseGuards(FirebaseAuthGuard)
   async removeReaction(
     @Param('photoId') photoId: string,
@@ -72,6 +77,7 @@ export class PhotoReactionsController {
   }
 
   @Get(':photoId')
+  @ApiOperation({ summary: 'Get all reaction stats for a photo' })
   async getReactions(
     @Param('photoId') photoId: string,
     @Req() req: RequestWithUser,

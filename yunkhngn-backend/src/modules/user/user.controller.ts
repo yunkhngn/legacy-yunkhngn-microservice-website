@@ -10,6 +10,7 @@ import {
   Request,
   Logger,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 
@@ -20,13 +21,16 @@ interface RequestWithUser extends Request {
   };
 }
 
+@ApiTags('User')
 @Controller('user')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
   constructor(private readonly userService: UserService) { }
 
-  @UseGuards(AuthGuard('firebase'))
   @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @UseGuards(AuthGuard('firebase'))
   async getProfile(@Request() req: RequestWithUser) {
     const uid = req.user.uid;
     const user = await this.userService.findByUid(uid);
@@ -36,8 +40,11 @@ export class UserController {
     return user;
   }
 
-  @UseGuards(AuthGuard('firebase'))
   @Patch('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, avatarUrl: { type: 'string' } } } })
+  @UseGuards(AuthGuard('firebase'))
   async updateProfile(
     @Request() req: RequestWithUser,
     @Body() body: { name?: string; avatarUrl?: string },
@@ -53,14 +60,18 @@ export class UserController {
     );
   }
 
-  @UseGuards(AuthGuard('firebase'))
   @Get()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all users (Admin/Staff only)' })
+  @UseGuards(AuthGuard('firebase'))
   findAll() {
     return this.userService.findAll();
   }
 
-  @UseGuards(AuthGuard('firebase'))
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new user' })
+  @UseGuards(AuthGuard('firebase'))
   create(
     @Body()
     body: {
@@ -78,8 +89,10 @@ export class UserController {
     );
   }
 
-  @UseGuards(AuthGuard('firebase'))
   @Patch(':uid')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update any user profile' })
+  @UseGuards(AuthGuard('firebase'))
   update(
     @Param('uid') uid: string,
     @Body() body: { name?: string; role?: string; password?: string },
@@ -87,8 +100,10 @@ export class UserController {
     return this.userService.update(uid, body);
   }
 
-  @UseGuards(AuthGuard('firebase'))
   @Delete(':uid')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a user' })
+  @UseGuards(AuthGuard('firebase'))
   remove(@Param('uid') uid: string) {
     return this.userService.delete(uid);
   }

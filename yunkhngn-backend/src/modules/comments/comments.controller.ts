@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -19,11 +20,14 @@ import { ReportCommentDto } from './dto/report-comment.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { FirebaseAuthGuard } from '../../common/guards';
 
+@ApiTags('Comments')
 @Controller('comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) { }
 
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Post a new comment' })
   @UseGuards(FirebaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
   create(@Body() createCommentDto: CreateCommentDto, @Request() req) {
@@ -31,6 +35,10 @@ export class CommentsController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get comments with optional filtering by blog or project' })
+  @ApiQuery({ name: 'blogId', required: false })
+  @ApiQuery({ name: 'projectId', required: false })
+  @ApiQuery({ name: 'includeHidden', required: false, description: 'Admin only' })
   findAll(
     @Query('blogId') blogId?: string,
     @Query('projectId') projectId?: string,
@@ -50,11 +58,14 @@ export class CommentsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a single comment by ID' })
   findOne(@Param('id') id: string) {
     return this.commentsService.findOne(id);
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update your own comment' })
   @UseGuards(FirebaseAuthGuard)
   update(
     @Param('id') id: string,
@@ -70,6 +81,8 @@ export class CommentsController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete your own comment' })
   @UseGuards(FirebaseAuthGuard)
   remove(@Param('id') id: string, @Request() req) {
     return this.commentsService.remove(
@@ -80,6 +93,8 @@ export class CommentsController {
   }
 
   @Post(':id/hide')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Hide a comment (Admin only)' })
   @UseGuards(FirebaseAuthGuard)
   hide(@Param('id') id: string, @Request() req) {
     if (!req.user.isAdmin) {
@@ -89,6 +104,8 @@ export class CommentsController {
   }
 
   @Post(':id/unhide')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unhide a comment (Admin only)' })
   @UseGuards(FirebaseAuthGuard)
   unhide(@Param('id') id: string, @Request() req) {
     if (!req.user.isAdmin) {
@@ -98,6 +115,8 @@ export class CommentsController {
   }
 
   @Post(':id/vote')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Vote on a comment' })
   @UseGuards(FirebaseAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute
   vote(@Param('id') id: string, @Body() voteDto: VoteDto, @Request() req) {
@@ -105,18 +124,24 @@ export class CommentsController {
   }
 
   @Get(':id/vote')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get your vote on a comment' })
   @UseGuards(FirebaseAuthGuard)
   getUserVote(@Param('id') id: string, @Request() req) {
     return this.commentsService.getUserVote(id, req.user.uid);
   }
 
   @Post('votes/batch')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get your votes on a batch of comments' })
   @UseGuards(FirebaseAuthGuard)
   getUserVotes(@Body('commentIds') commentIds: string[], @Request() req) {
     return this.commentsService.getUserVotes(commentIds, req.user.uid);
   }
 
   @Post(':id/report')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Report a comment' })
   @UseGuards(FirebaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
   report(
@@ -128,7 +153,10 @@ export class CommentsController {
   }
 
   @Get('admin/reports')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all reported comments (Admin only)' })
   @UseGuards(FirebaseAuthGuard)
+  @ApiQuery({ name: 'status', required: false })
   getReports(
     @Query('status') status?: string,
     @Query('page') page: number = 1,
@@ -142,6 +170,8 @@ export class CommentsController {
   }
 
   @Patch('admin/reports/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update report status (Admin only)' })
   @UseGuards(FirebaseAuthGuard)
   updateReportStatus(
     @Param('id') id: string,
@@ -155,6 +185,8 @@ export class CommentsController {
   }
 
   @Delete('admin/reports/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a report (Admin only)' })
   @UseGuards(FirebaseAuthGuard)
   deleteReport(@Param('id') id: string, @Request() req) {
     if (!req.user.isAdmin) {
