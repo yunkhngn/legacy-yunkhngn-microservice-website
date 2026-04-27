@@ -1,0 +1,9 @@
+# API Subdomain
+api.yunkhngn.dev {
+    reverse_proxy backend:3001
+}
+
+# Main Domain
+yunkhngn.dev, www.yunkhngn.dev {
+    reverse_proxy frontend:3000
+}
