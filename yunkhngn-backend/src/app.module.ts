@@ -1,43 +1,58 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { AllExceptionsFilter, HttpExceptionFilter } from './common/filters';
+import {
+  LoggingInterceptor,
+  TransformInterceptor,
+} from './common/interceptors';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CloudinaryModule } from './cloudinary/cloudinary.module';
-import { PrismaModule } from './prisma/prisma.module';
-import { BlogModule } from './blog/blog.module';
-import { ProjectModule } from './project/project.module';
-import { GalleryModule } from './gallery/gallery.module';
-import { CommentsModule } from './comments/comments.module';
-import { SettingsModule } from './settings/settings.module';
-import { UserModule } from './user/user.module';
-import { AiModule } from './ai/ai.module';
-import { PhotoReactionsModule } from './photo-reactions/photo-reactions.module';
-import { ContactModule } from './contact/contact.module';
+import {
+  appConfig,
+  databaseConfig,
+  redisConfig,
+  firebaseConfig,
+} from './config';
+import { PrismaModule } from './database/prisma/prisma.module';
 
-import { HealthController } from './health/health.controller';
+// Domain Modules
+import { BlogModule } from './modules/blog/blog.module';
+import { ProjectModule } from './modules/project/project.module';
+import { GalleryModule } from './modules/gallery/gallery.module';
+import { CommentsModule } from './modules/comments/comments.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { UserModule } from './modules/user/user.module';
+import { AiModule } from './modules/ai/ai.module';
+import { PhotoReactionsModule } from './modules/photo-reactions/photo-reactions.module';
+import { ContactModule } from './modules/contact/contact.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MediaModule } from './modules/media/media.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { SystemModule } from './modules/system/system.module';
+import { ShortlinkModule } from './modules/shortlink/shortlink.module';
+import { AlbumModule } from './modules/album/album.module';
+import { JournalModule } from './modules/journal/journal.module';
+import { LetterModule } from './modules/letter/letter.module';
 
-import { NotificationsModule } from './notifications/notifications.module';
-import { CloudflareModule } from './cloudflare/cloudflare.module';
-import { GithubModule } from './github/github.module';
-import { MediaModule } from './media/media.module';
-import { ChatModule } from './chat/chat.module';
-import { SystemModule } from './system/system.module';
-import { NewsletterModule } from './newsletter/newsletter.module';
-import { ShortlinkModule } from './shortlink/shortlink.module';
-import { AlbumModule } from './album/album.module';
-import { JournalModule } from './journal/journal.module';
-import { LastFmModule } from './lastfm/lastfm.module';
-import { LetterModule } from './letter/letter.module';
+// Integration Modules
+import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
+import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.module';
+import { GithubModule } from './modules/integrations/github/github.module';
+import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
+import { NewsletterModule } from './modules/integrations/newsletter/newsletter.module';
+
+import { HealthController } from './modules/health/health.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      load: [appConfig, databaseConfig, redisConfig, firebaseConfig],
       isGlobal: true,
     }),
     ThrottlerModule.forRoot([
@@ -88,6 +103,22 @@ import { LetterModule } from './letter/letter.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
     },
   ],
 })
