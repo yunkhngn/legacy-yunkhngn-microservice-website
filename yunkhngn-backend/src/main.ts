@@ -46,7 +46,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: true, // Dynamically mirror origin to support Vercel wildcard subdomains and credentials
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
