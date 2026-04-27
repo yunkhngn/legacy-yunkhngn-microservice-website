@@ -22,10 +22,9 @@ services:
     image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: yunkhngn-mssql
     restart: always
-    # Bạn sẽ đem các biến môi trường mssql này từ bên cũ sang
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=Khoadeptrai1204! 
+      - MSSQL_SA_PASSWORD=Khoadeptrai1204!
     volumes:
       - mssql_data:/var/opt/mssql
       - ./backups:/var/opt/mssql/backups
@@ -35,11 +34,9 @@ services:
       - "1433:1433"
 
   backend:
-    # Nhớ sửa lại yunkhngn thành github.actor/username thật của bạn
-    image: ghcr.io/<github-username>/yunkhngn-be:latest
+    image: ghcr.io/yunkhngn/yunkhngn-backend:latest
     container_name: yunkhngn-backend
     restart: always
-    # File .env của Backend. Lúc setup trên VPS bạn tạo/copy file .env-be vào thư mục infra
     env_file:
       - ./env-be
     environment:
@@ -52,18 +49,15 @@ services:
     networks:
       - app-network
     volumes:
-      # Copy file firebase từ repo dev lên infra folder trên VPS nhé
       - ./firebase-admin-sdk.json:/app/firebase-admin-sdk.json
     depends_on:
       - mssql
       - letter-ai
 
   letter-ai:
-    # Nhớ sửa lại yunkhngn thành github.actor/username thật của bạn
-    image: ghcr.io/<github-username>/yunkhngn-ai:latest
+    image: ghcr.io/yunkhngn/yunkhngn-letter-ai:latest
     container_name: yunkhngn-letter-ai
     restart: always
-    # File .env của AI. Lúc setup VPS bạn tạo file .env-ai vào thư mục infra
     env_file:
       - ./env-ai
     networks:
