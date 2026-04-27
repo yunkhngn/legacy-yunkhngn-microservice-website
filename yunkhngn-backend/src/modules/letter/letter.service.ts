@@ -94,7 +94,7 @@ export class LetterService {
     const selfUrl = process.env.SELF_URL || 'http://localhost:3001';
     try {
       this.logger.log(`Triggering AI processing for letter: ${letterId}`);
-      await axios.post(`${aiUrl}/process`, {
+      await axios.post(`${aiUrl}/api/v1/letter/process`, {
         letterId,
         pages: pages.map((p) => ({ id: p.id, imageUrl: p.imageUrl })),
         callbackUrl: `${selfUrl}/letters/processing-callback`,
