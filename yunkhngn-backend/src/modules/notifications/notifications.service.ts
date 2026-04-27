@@ -8,12 +8,19 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    @Inject(INotificationRepository) private readonly notificationRepository: INotificationRepository,
+    @Inject(INotificationRepository)
+    private readonly notificationRepository: INotificationRepository,
     private readonly notificationsGateway: NotificationsGateway,
-  ) { }
+  ) {}
 
-  async create(type: string, message: string, link?: string): Promise<Notification> {
-    this.logger.log(`Creating notification: ${type} - ${message.substring(0, 50)}...`);
+  async create(
+    type: string,
+    message: string,
+    link?: string,
+  ): Promise<Notification> {
+    this.logger.log(
+      `Creating notification: ${type} - ${message.substring(0, 50)}...`,
+    );
     const notification = await this.notificationRepository.create({
       type,
       message,
@@ -27,10 +34,11 @@ export class NotificationsService {
   async findAll(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
-    const { data: notifications, total } = await this.notificationRepository.findAll({
-      skip,
-      take: limit,
-    });
+    const { data: notifications, total } =
+      await this.notificationRepository.findAll({
+        skip,
+        take: limit,
+      });
 
     const unreadCount = await this.notificationRepository.countUnread();
 

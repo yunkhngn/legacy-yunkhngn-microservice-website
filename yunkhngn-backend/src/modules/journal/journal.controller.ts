@@ -9,7 +9,12 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JournalService } from './journal.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
@@ -20,7 +25,7 @@ import { User } from '../auth/user.decorator';
 @ApiTags('Journal')
 @Controller('journals')
 export class JournalController {
-  constructor(private readonly journalService: JournalService) { }
+  constructor(private readonly journalService: JournalService) {}
 
   @Post()
   @ApiBearerAuth()

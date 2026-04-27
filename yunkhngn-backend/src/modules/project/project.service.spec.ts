@@ -14,7 +14,6 @@ const mockProjectRepository = {
 
 describe('ProjectService', () => {
   let service: ProjectService;
-  let repository: IProjectRepository;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +24,6 @@ describe('ProjectService', () => {
     }).compile();
 
     service = module.get<ProjectService>(ProjectService);
-    repository = module.get<IProjectRepository>(IProjectRepository);
   });
 
   it('should be defined', () => {

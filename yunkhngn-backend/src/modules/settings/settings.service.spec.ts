@@ -19,7 +19,6 @@ const mockEncryptionService = {
 
 describe('SettingsService', () => {
   let service: SettingsService;
-  let repository: ISettingsRepository;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,7 +30,6 @@ describe('SettingsService', () => {
     }).compile();
 
     service = module.get<SettingsService>(SettingsService);
-    repository = module.get<ISettingsRepository>(ISettingsRepository);
   });
 
   it('should be defined', () => {

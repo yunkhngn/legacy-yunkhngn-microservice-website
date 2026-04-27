@@ -10,11 +10,12 @@ export class ContactService {
   private readonly logger = new Logger(ContactService.name);
 
   constructor(
-    @Inject(IContactRepository) private readonly contactRepository: IContactRepository,
+    @Inject(IContactRepository)
+    private readonly contactRepository: IContactRepository,
     private readonly emailService: EmailService,
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   async createContact(data: {
     name: string;
@@ -41,7 +42,9 @@ export class ContactService {
     // Send notification email to admin (non-blocking)
     this.emailService
       .sendContactNotification(contact)
-      .catch((err) => this.logger.error('Failed to send notification email', err.stack));
+      .catch((err) =>
+        this.logger.error('Failed to send notification email', err.stack),
+      );
 
     // Send real-time notification
     this.notificationsService

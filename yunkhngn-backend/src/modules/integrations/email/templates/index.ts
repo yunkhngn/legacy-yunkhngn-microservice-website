@@ -1,5 +1,5 @@
 export const getNotificationTemplate = (data: any): string => {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,23 +23,25 @@ export const getNotificationTemplate = (data: any): string => {
                 </div>
             </div>
 
-            ${data.phone
-            ? `
+            ${
+              data.phone
+                ? `
             <div style="display: grid; grid-template-columns: 100px 1fr; gap: 16px; margin-bottom: 24px;">
                 <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; padding-top: 4px;">Phone</div>
                 <div style="font-size: 15px; color: #ccc;">${data.phone}</div>
             </div>`
-            : ''
-        }
+                : ''
+            }
 
-            ${data.company
-            ? `
+            ${
+              data.company
+                ? `
             <div style="display: grid; grid-template-columns: 100px 1fr; gap: 16px; margin-bottom: 24px;">
                 <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; padding-top: 4px;">Company</div>
                 <div style="font-size: 15px; color: #ccc;">${data.company}</div>
             </div>`
-            : ''
-        }
+                : ''
+            }
 
             <div style="display: grid; grid-template-columns: 100px 1fr; gap: 16px; margin-bottom: 24px;">
                 <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; padding-top: 4px;">Category</div>
@@ -61,7 +63,7 @@ export const getNotificationTemplate = (data: any): string => {
 };
 
 export const getResponseTemplate = (data: any): string => {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -110,7 +112,7 @@ export const getResponseTemplate = (data: any): string => {
 };
 
 export const getCustomMailTemplate = (data: any): string => {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,7 +156,7 @@ export const getCustomMailTemplate = (data: any): string => {
 };
 
 export const getWelcomeTemplate = (unsubscribeLink: string): string => {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,8 +185,11 @@ export const getWelcomeTemplate = (unsubscribeLink: string): string => {
 </html>`;
 };
 
-export const getNewsletterTemplate = (content: string, unsubscribeLink: string): string => {
-    return `
+export const getNewsletterTemplate = (
+  content: string,
+  unsubscribeLink: string,
+): string => {
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>

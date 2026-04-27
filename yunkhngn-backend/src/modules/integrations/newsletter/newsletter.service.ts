@@ -11,7 +11,7 @@ export class NewsletterService {
     @Inject(ISubscriberRepository)
     private readonly repository: ISubscriberRepository,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   async subscribe(email: string) {
     const existing = await this.repository.findByEmail(email);
@@ -25,9 +25,11 @@ export class NewsletterService {
     const frontendUrl = process.env.FRONTEND_URL || 'https://yunkhngn.com';
     const unsubscribeLink = `${frontendUrl}/newsletter/unsubscribe?token=${token}`;
 
-    this.emailService.sendWelcomeEmail(email, unsubscribeLink).catch(err =>
-      this.logger.error(`Failed to send welcome email to ${email}`, err)
-    );
+    this.emailService
+      .sendWelcomeEmail(email, unsubscribeLink)
+      .catch((err) =>
+        this.logger.error(`Failed to send welcome email to ${email}`, err),
+      );
 
     return { message: 'Successfully subscribed', id: subscriber.id };
   }
@@ -51,9 +53,14 @@ export class NewsletterService {
     // Loop and send individually for unique unsubscribe links
     for (const subscriber of subscribers) {
       const unsubscribeLink = `${frontendUrl}/newsletter/unsubscribe?token=${subscriber.token}`;
-      this.emailService.sendNewsletter(subscriber.email, subject, content, unsubscribeLink).catch(err =>
-        this.logger.error(`Failed to send newsletter to ${subscriber.email}`, err)
-      );
+      this.emailService
+        .sendNewsletter(subscriber.email, subject, content, unsubscribeLink)
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send newsletter to ${subscriber.email}`,
+            err,
+          ),
+        );
     }
 
     return { sent: subscribers.length };

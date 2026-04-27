@@ -9,7 +9,7 @@ export class UserService {
 
   constructor(
     @Inject(IUserRepository) private readonly userRepository: IUserRepository,
-  ) { }
+  ) {}
 
   async findByUid(uid: string): Promise<User | null> {
     return this.userRepository.findByUid(uid);

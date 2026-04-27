@@ -18,7 +18,7 @@ import { Roles } from '../../common/decorators';
 @ApiTags('Album')
 @Controller('albums')
 export class AlbumController {
-  constructor(private readonly albumService: AlbumService) { }
+  constructor(private readonly albumService: AlbumService) {}
 
   @Post()
   @ApiBearerAuth()

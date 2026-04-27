@@ -19,4 +19,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [BlogService],
 })
-export class BlogModule { }
+export class BlogModule {}

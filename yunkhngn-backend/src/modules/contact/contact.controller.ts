@@ -18,7 +18,7 @@ import { CreateContactDto } from './dto/create-contact.dto';
 @ApiTags('Contact')
 @Controller('contact')
 export class ContactController {
-  constructor(private readonly contactService: ContactService) { }
+  constructor(private readonly contactService: ContactService) {}
 
   @Post()
   @ApiOperation({ summary: 'Submit a contact form message' })
@@ -46,7 +46,9 @@ export class ContactController {
   @Patch(':id/status')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update contact message status' })
-  @ApiBody({ schema: { type: 'object', properties: { status: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { status: { type: 'string' } } },
+  })
   @UseGuards(FirebaseAuthGuard)
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.contactService.updateContactStatus(id, status);
@@ -55,7 +57,9 @@ export class ContactController {
   @Post(':id/respond')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Respond to a contact message via email' })
-  @ApiBody({ schema: { type: 'object', properties: { response: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { response: { type: 'string' } } },
+  })
   @UseGuards(FirebaseAuthGuard)
   async respondToContact(
     @Param('id') id: string,
@@ -66,8 +70,18 @@ export class ContactController {
 
   @Post(':id/ai-suggest')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Generate AI suggestion for responding to a contact message' })
-  @ApiBody({ schema: { type: 'object', properties: { language: { type: 'string', default: 'vi' }, existingText: { type: 'string' } } } })
+  @ApiOperation({
+    summary: 'Generate AI suggestion for responding to a contact message',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        language: { type: 'string', default: 'vi' },
+        existingText: { type: 'string' },
+      },
+    },
+  })
   @UseGuards(FirebaseAuthGuard)
   async generateAiSuggestion(
     @Param('id') id: string,
@@ -107,7 +121,16 @@ export class ContactController {
   @Post('ai-compose')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Compose a custom email using AI' })
-  @ApiBody({ schema: { type: 'object', properties: { topic: { type: 'string' }, recipientName: { type: 'string' }, language: { type: 'string', default: 'vi' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string' },
+        recipientName: { type: 'string' },
+        language: { type: 'string', default: 'vi' },
+      },
+    },
+  })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
   async composeAiEmail(

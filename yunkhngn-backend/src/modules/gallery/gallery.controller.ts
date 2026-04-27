@@ -9,7 +9,12 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
@@ -18,7 +23,7 @@ import { Roles } from '../../common/decorators';
 @ApiTags('Gallery')
 @Controller('gallery')
 export class GalleryController {
-  constructor(private readonly galleryService: GalleryService) { }
+  constructor(private readonly galleryService: GalleryService) {}
 
   @Post()
   @ApiBearerAuth()

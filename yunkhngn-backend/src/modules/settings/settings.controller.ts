@@ -15,7 +15,7 @@ import { FirebaseAuthGuard } from '../../common/guards';
 @ApiTags('Settings')
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) { }
+  constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get public settings' })
@@ -25,7 +25,9 @@ export class SettingsController {
 
   @Get('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all settings including sensitive ones (Admin only)' })
+  @ApiOperation({
+    summary: 'Get all settings including sensitive ones (Admin only)',
+  })
   @UseGuards(FirebaseAuthGuard)
   getAdminSettings() {
     return this.settingsService.getAdminSettings();

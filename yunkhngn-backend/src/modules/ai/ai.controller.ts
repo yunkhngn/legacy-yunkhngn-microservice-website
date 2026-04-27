@@ -6,12 +6,14 @@ import { FirebaseAuthGuard } from '../../common/guards';
 @ApiTags('AI')
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) { }
+  constructor(private readonly aiService: AiService) {}
 
   @Post('generate')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate generic text using AI' })
-  @ApiBody({ schema: { type: 'object', properties: { prompt: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { prompt: { type: 'string' } } },
+  })
   @UseGuards(FirebaseAuthGuard)
   async generate(@Body('prompt') prompt: string) {
     if (!prompt) {
@@ -23,8 +25,18 @@ export class AiController {
 
   @Post('project-info')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Generate project intro/tech stack from GitHub URL' })
-  @ApiBody({ schema: { type: 'object', properties: { repoUrl: { type: 'string' }, language: { type: 'string', default: 'vi' } } } })
+  @ApiOperation({
+    summary: 'Generate project intro/tech stack from GitHub URL',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        repoUrl: { type: 'string' },
+        language: { type: 'string', default: 'vi' },
+      },
+    },
+  })
   @UseGuards(FirebaseAuthGuard)
   async generateProjectInfo(
     @Body('repoUrl') repoUrl: string,
@@ -39,7 +51,16 @@ export class AiController {
   @Post('blog-content')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Draft or edit blog content using AI' })
-  @ApiBody({ schema: { type: 'object', properties: { prompt: { type: 'string' }, currentContent: { type: 'string' }, language: { type: 'string', default: 'vi' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string' },
+        currentContent: { type: 'string' },
+        language: { type: 'string', default: 'vi' },
+      },
+    },
+  })
   @UseGuards(FirebaseAuthGuard)
   async generateBlogContent(
     @Body('prompt') prompt: string,
@@ -59,7 +80,9 @@ export class AiController {
 
   @Post('dashboard-summary')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Generate a periodic summary for the admin dashboard' })
+  @ApiOperation({
+    summary: 'Generate a periodic summary for the admin dashboard',
+  })
   @UseGuards(FirebaseAuthGuard)
   async generateDashboardSummary(
     @Body('stats') stats: any,

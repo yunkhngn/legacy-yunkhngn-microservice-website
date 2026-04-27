@@ -25,7 +25,10 @@ describe('NotificationsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
-        { provide: INotificationRepository, useValue: mockNotificationRepository },
+        {
+          provide: INotificationRepository,
+          useValue: mockNotificationRepository,
+        },
         { provide: NotificationsGateway, useValue: mockNotificationsGateway },
       ],
     }).compile();
@@ -53,9 +56,7 @@ describe('NotificationsService', () => {
         createdAt: new Date(),
       };
 
-      repository.create.mockResolvedValue(
-        createdNotification,
-      );
+      repository.create.mockResolvedValue(createdNotification);
 
       const result = await service.create(dto.type, dto.message, dto.link);
 

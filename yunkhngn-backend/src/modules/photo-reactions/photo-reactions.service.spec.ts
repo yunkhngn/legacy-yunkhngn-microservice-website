@@ -23,7 +23,10 @@ describe('PhotoReactionsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PhotoReactionsService,
-        { provide: IPhotoReactionRepository, useValue: mockPhotoReactionRepository },
+        {
+          provide: IPhotoReactionRepository,
+          useValue: mockPhotoReactionRepository,
+        },
         { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
@@ -49,7 +52,11 @@ describe('PhotoReactionsService', () => {
 
       await service.addOrUpdateReaction(photoId, uid, reactionType);
 
-      expect(repository.upsert).toHaveBeenCalledWith(photoId, uid, reactionType);
+      expect(repository.upsert).toHaveBeenCalledWith(
+        photoId,
+        uid,
+        reactionType,
+      );
       expect(notificationsService.create).toHaveBeenCalledWith(
         'LIKE',
         expect.stringContaining(reactionType),

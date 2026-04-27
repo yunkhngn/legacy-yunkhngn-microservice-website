@@ -21,7 +21,7 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 @Controller('projects')
 @UseInterceptors(CacheInterceptor)
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(private readonly projectService: ProjectService) {}
 
   @Post()
   @ApiBearerAuth()

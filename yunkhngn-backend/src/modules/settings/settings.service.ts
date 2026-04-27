@@ -1,33 +1,95 @@
-import { Injectable, OnModuleInit, BadRequestException, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  BadRequestException,
+  Inject,
+  Logger,
+} from '@nestjs/common';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { EncryptionService } from '../../common/encryption.service';
 import { ISettingsRepository } from './domain/settings.repository.interface';
 import { Setting } from './domain/setting.entity';
 
 const SYSTEM_SETTINGS = [
-  'bio', 'quote', 'facebook', 'github', 'instagram', 'linkedin', 'tiktok', 'email',
-  'homepage_description', 'footer_description', 'about_content',
-  'comment_forbidden_keywords', 'chat_forbidden_words', 'education', 'experience', 'skills',
-  'cv_url', 'gemini_api_key', 'ai_persona', 'cloudinary_cloud_name', 'cloudinary_api_key',
-  'cloudinary_api_secret', 'resend_api_key', 'resend_domain', 'admin_email',
-  'cloudflare_zone_id', 'cloudflare_account_id', 'cloudflare_api_token',
-  'github_api_key', 'github_username', 'github_repo_name', 'chat_api_key',
-  'avatar', 'about_image_story', 'about_image_journey', 'about_image_skills',
-  'about_image_contact', 'lastfm_api_key', 'lastfm_username',
+  'bio',
+  'quote',
+  'facebook',
+  'github',
+  'instagram',
+  'linkedin',
+  'tiktok',
+  'email',
+  'homepage_description',
+  'footer_description',
+  'about_content',
+  'comment_forbidden_keywords',
+  'chat_forbidden_words',
+  'education',
+  'experience',
+  'skills',
+  'cv_url',
+  'gemini_api_key',
+  'ai_persona',
+  'cloudinary_cloud_name',
+  'cloudinary_api_key',
+  'cloudinary_api_secret',
+  'resend_api_key',
+  'resend_domain',
+  'admin_email',
+  'cloudflare_zone_id',
+  'cloudflare_account_id',
+  'cloudflare_api_token',
+  'github_api_key',
+  'github_username',
+  'github_repo_name',
+  'chat_api_key',
+  'avatar',
+  'about_image_story',
+  'about_image_journey',
+  'about_image_skills',
+  'about_image_contact',
+  'lastfm_api_key',
+  'lastfm_username',
 ];
 
 const PUBLIC_SETTINGS = [
-  'bio', 'quote', 'facebook', 'github', 'instagram', 'linkedin', 'tiktok', 'email',
-  'homepage_description', 'footer_description', 'about_content', 'education', 'experience',
-  'skills', 'cv_url', 'cloudinary_cloud_name', 'avatar', 'about_image_story',
-  'about_image_journey', 'about_image_skills', 'about_image_contact', 'lastfm_username',
-  'github_username', 'github_repo_name', 'comment_forbidden_keywords', 'chat_forbidden_words',
+  'bio',
+  'quote',
+  'facebook',
+  'github',
+  'instagram',
+  'linkedin',
+  'tiktok',
+  'email',
+  'homepage_description',
+  'footer_description',
+  'about_content',
+  'education',
+  'experience',
+  'skills',
+  'cv_url',
+  'cloudinary_cloud_name',
+  'avatar',
+  'about_image_story',
+  'about_image_journey',
+  'about_image_skills',
+  'about_image_contact',
+  'lastfm_username',
+  'github_username',
+  'github_repo_name',
+  'comment_forbidden_keywords',
+  'chat_forbidden_words',
   'ai_persona',
 ];
 
 const SENSITIVE_KEYS = [
-  'gemini_api_key', 'cloudinary_api_secret', 'resend_api_key', 'cloudflare_api_token',
-  'github_api_key', 'lastfm_api_key', 'chat_api_key',
+  'gemini_api_key',
+  'cloudinary_api_secret',
+  'resend_api_key',
+  'cloudflare_api_token',
+  'github_api_key',
+  'lastfm_api_key',
+  'chat_api_key',
 ];
 
 @Injectable()
@@ -35,9 +97,10 @@ export class SettingsService implements OnModuleInit {
   private readonly logger = new Logger(SettingsService.name);
 
   constructor(
-    @Inject(ISettingsRepository) private readonly settingsRepository: ISettingsRepository,
+    @Inject(ISettingsRepository)
+    private readonly settingsRepository: ISettingsRepository,
     private readonly encryptionService: EncryptionService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     try {
@@ -103,7 +166,7 @@ export class SettingsService implements OnModuleInit {
     return this.settingsRepository.delete(id);
   }
 
-  async getDecryptedSetting(title: string): Promise<string | null> {
+  async getDecryptedSetting(title: string) {
     try {
       const setting = await this.settingsRepository.findByTitle(title);
 
@@ -115,7 +178,10 @@ export class SettingsService implements OnModuleInit {
 
       return setting.content;
     } catch (error) {
-      this.logger.warn(`Failed to fetch and decrypt setting: ${title}`, error.message);
+      this.logger.warn(
+        `Failed to fetch and decrypt setting: ${title}`,
+        error.message,
+      );
       return null;
     }
   }

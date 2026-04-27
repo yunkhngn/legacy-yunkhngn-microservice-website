@@ -18,7 +18,7 @@ import { Roles } from '../../common/decorators';
 @ApiTags('Shortlink')
 @Controller('shortlinks')
 export class ShortlinkController {
-  constructor(private readonly shortlinkService: ShortlinkService) { }
+  constructor(private readonly shortlinkService: ShortlinkService) {}
 
   @Post()
   @ApiBearerAuth()

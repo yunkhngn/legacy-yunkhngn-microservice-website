@@ -18,7 +18,7 @@ import { Roles } from '../../common/decorators';
 @ApiTags('Letter')
 @Controller('letters')
 export class LetterController {
-  constructor(private readonly letterService: LetterService) { }
+  constructor(private readonly letterService: LetterService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -54,7 +54,9 @@ export class LetterController {
   }
 
   @Post('processing-callback')
-  @ApiOperation({ summary: 'Callback for AI processing service to return timing maps' })
+  @ApiOperation({
+    summary: 'Callback for AI processing service to return timing maps',
+  })
   processingCallback(
     @Body()
     body: {

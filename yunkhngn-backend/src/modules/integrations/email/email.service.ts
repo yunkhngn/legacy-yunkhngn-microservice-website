@@ -25,7 +25,9 @@ export class EmailService {
         process.env.RESEND_API_KEY;
 
       if (!apiKey) {
-        this.logger.warn('Resend API key not found. Email service may not work.');
+        this.logger.warn(
+          'Resend API key not found. Email service may not work.',
+        );
         return;
       }
 

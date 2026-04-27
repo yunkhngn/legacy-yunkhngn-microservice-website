@@ -18,8 +18,9 @@ export class LetterService {
   private readonly logger = new Logger(LetterService.name);
 
   constructor(
-    @Inject(ILetterRepository) private readonly letterRepository: ILetterRepository,
-  ) { }
+    @Inject(ILetterRepository)
+    private readonly letterRepository: ILetterRepository,
+  ) {}
 
   private stripSensitive(letter: Letter) {
     const { password, ...rest } = letter;
@@ -109,13 +110,17 @@ export class LetterService {
     pages: { id: string; revealMapUrl: string }[];
     success: boolean;
   }) {
-    this.logger.log(`Processing callback received for letter: ${data.letterId}, success: ${data.success}`);
+    this.logger.log(
+      `Processing callback received for letter: ${data.letterId}, success: ${data.success}`,
+    );
     if (!data.success) {
       await this.letterRepository.update(data.letterId, { status: 'failed' });
       return { ok: true };
     }
     for (const page of data.pages) {
-      await this.letterRepository.updatePage(page.id, { revealMapUrl: page.revealMapUrl });
+      await this.letterRepository.updatePage(page.id, {
+        revealMapUrl: page.revealMapUrl,
+      });
     }
     await this.letterRepository.update(data.letterId, { status: 'ready' });
     return { ok: true };
@@ -136,16 +141,21 @@ export class LetterService {
     if (letter.status === 'failed')
       throw new NotFoundException('Letter processing failed');
 
-    this.letterRepository.incrementViews(letter.id).catch((err) =>
-      this.logger.error(`Failed to increment views for letter: ${letter.id}`, err.stack)
-    );
+    this.letterRepository
+      .incrementViews(letter.id)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to increment views for letter: ${letter.id}`,
+          err.stack,
+        ),
+      );
 
     return {
       id: letter.id,
       title: letter.title,
       hasPassword: !!letter.password,
       enableAnimation: letter.enableAnimation,
-      pages: letter.password ? [] : (letter.pages || []),
+      pages: letter.password ? [] : letter.pages || [],
       createdAt: letter.createdAt,
     };
   }
@@ -160,7 +170,8 @@ export class LetterService {
     if (letter.status === 'failed')
       throw new NotFoundException('Letter processing failed');
 
-    if (!letter.password) return { pages: letter.pages || [], title: letter.title };
+    if (!letter.password)
+      return { pages: letter.pages || [], title: letter.title };
 
     const isValid = await bcrypt.compare(password, letter.password);
     if (!isValid) throw new ForbiddenException('Incorrect password');
@@ -186,7 +197,8 @@ export class LetterService {
       data.password = await bcrypt.hash(dto.password, 10);
     }
 
-    if (dto.enableAnimation !== undefined) data.enableAnimation = dto.enableAnimation;
+    if (dto.enableAnimation !== undefined)
+      data.enableAnimation = dto.enableAnimation;
     const isAnimEnabled = dto.enableAnimation ?? existing.enableAnimation;
 
     let shouldReprocess = false;
@@ -243,7 +255,9 @@ export class LetterService {
   }
 
   async bulkUpdateStatus(ids: string[], isActive: boolean) {
-    this.logger.log(`Bulk updating status for ${ids.length} letters to ${isActive}`);
+    this.logger.log(
+      `Bulk updating status for ${ids.length} letters to ${isActive}`,
+    );
     const count = await this.letterRepository.updateManyStatus(ids, isActive);
     return { updated: count };
   }

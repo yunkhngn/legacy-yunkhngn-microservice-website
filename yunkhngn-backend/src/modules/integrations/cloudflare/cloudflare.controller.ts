@@ -1,5 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CloudflareService } from './cloudflare.service';
 import { FirebaseAuthGuard, RolesGuard } from '../../../common/guards';
 import { Roles } from '../../../common/decorators';
@@ -9,7 +14,7 @@ import { Roles } from '../../../common/decorators';
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class CloudflareController {
-  constructor(private readonly cloudflareService: CloudflareService) { }
+  constructor(private readonly cloudflareService: CloudflareService) {}
 
   @Get()
   @ApiBearerAuth()

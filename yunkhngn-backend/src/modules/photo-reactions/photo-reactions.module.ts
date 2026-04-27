@@ -18,4 +18,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [PhotoReactionsService],
 })
-export class PhotoReactionsModule { }
+export class PhotoReactionsModule {}

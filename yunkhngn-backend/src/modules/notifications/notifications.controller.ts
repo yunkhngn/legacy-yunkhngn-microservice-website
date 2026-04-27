@@ -7,7 +7,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
@@ -17,7 +22,7 @@ import { Roles } from '../../common/decorators';
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) { }
+  constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
   @ApiBearerAuth()
@@ -37,7 +42,9 @@ export class NotificationsController {
 
   @Patch(':id/read')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Mark a specific notification as read (Admin only)' })
+  @ApiOperation({
+    summary: 'Mark a specific notification as read (Admin only)',
+  })
   markAsRead(@Param('id') id: string) {
     return this.notificationsService.markAsRead(id);
   }

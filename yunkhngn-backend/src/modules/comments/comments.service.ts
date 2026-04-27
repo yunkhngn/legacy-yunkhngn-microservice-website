@@ -23,10 +23,11 @@ export class CommentsService {
   private readonly rateLimitMap = new Map<string, number>();
 
   constructor(
-    @Inject(ICommentRepository) private readonly commentRepository: ICommentRepository,
+    @Inject(ICommentRepository)
+    private readonly commentRepository: ICommentRepository,
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   private checkRateLimit(uid: string): void {
     const now = Date.now();
@@ -59,7 +60,9 @@ export class CommentsService {
     this.checkRateLimit(uid);
 
     if (!createCommentDto.blogId && !createCommentDto.projectId) {
-      throw new BadRequestException('Either blogId or projectId must be provided');
+      throw new BadRequestException(
+        'Either blogId or projectId must be provided',
+      );
     }
 
     // 1. Sanitize XSS
@@ -107,15 +110,19 @@ export class CommentsService {
     });
 
     // Handle notifications (non-blocking)
-    this.triggerNotification(comment, createCommentDto, cleanContent).catch(err =>
-      this.logger.error('Failed to trigger notification', err.stack)
+    this.triggerNotification(comment, createCommentDto, cleanContent).catch(
+      (err) => this.logger.error('Failed to trigger notification', err.stack),
     );
 
     const [commentWithUser] = await this.attachUserDetails([comment]);
     return commentWithUser;
   }
 
-  private async triggerNotification(comment: any, dto: CreateCommentDto, cleanContent: string) {
+  private async triggerNotification(
+    comment: any,
+    dto: CreateCommentDto,
+    cleanContent: string,
+  ) {
     let notificationLink = '/admin/comments';
     if (dto.blogId) {
       // Ideally this should be in Repository or Service depending on how we handle it
@@ -251,27 +258,50 @@ export class CommentsService {
     if (existingVote) {
       if (existingVote.value === voteDto.value) {
         await this.commentRepository.deleteVote(existingVote.id);
-        const updateData = voteDto.value === 1
-          ? { upvoteCount: { decrement: 1 } }
-          : { downvoteCount: { decrement: 1 } };
-        const updatedComment = await this.commentRepository.update(commentId, updateData);
-        const [commentWithUser] = await this.attachUserDetails([updatedComment]);
+        const updateData =
+          voteDto.value === 1
+            ? { upvoteCount: { decrement: 1 } }
+            : { downvoteCount: { decrement: 1 } };
+        const updatedComment = await this.commentRepository.update(
+          commentId,
+          updateData,
+        );
+        const [commentWithUser] = await this.attachUserDetails([
+          updatedComment,
+        ]);
         return commentWithUser;
       } else {
         await this.commentRepository.updateVote(existingVote.id, voteDto.value);
-        const updateData = existingVote.value === 1
-          ? { upvoteCount: { decrement: 1 }, downvoteCount: { increment: 1 } }
-          : { downvoteCount: { decrement: 1 }, upvoteCount: { increment: 1 } };
-        const updatedComment = await this.commentRepository.update(commentId, updateData);
-        const [commentWithUser] = await this.attachUserDetails([updatedComment]);
+        const updateData =
+          existingVote.value === 1
+            ? { upvoteCount: { decrement: 1 }, downvoteCount: { increment: 1 } }
+            : {
+                downvoteCount: { decrement: 1 },
+                upvoteCount: { increment: 1 },
+              };
+        const updatedComment = await this.commentRepository.update(
+          commentId,
+          updateData,
+        );
+        const [commentWithUser] = await this.attachUserDetails([
+          updatedComment,
+        ]);
         return commentWithUser;
       }
     } else {
-      await this.commentRepository.createVote({ commentId, uid, value: voteDto.value });
-      const updateData = voteDto.value === 1
-        ? { upvoteCount: { increment: 1 } }
-        : { downvoteCount: { increment: 1 } };
-      const updatedComment = await this.commentRepository.update(commentId, updateData);
+      await this.commentRepository.createVote({
+        commentId,
+        uid,
+        value: voteDto.value,
+      });
+      const updateData =
+        voteDto.value === 1
+          ? { upvoteCount: { increment: 1 } }
+          : { downvoteCount: { increment: 1 } };
+      const updatedComment = await this.commentRepository.update(
+        commentId,
+        updateData,
+      );
       const [commentWithUser] = await this.attachUserDetails([updatedComment]);
       return commentWithUser;
     }
@@ -286,9 +316,16 @@ export class CommentsService {
     return this.commentRepository.findVotesByCommentIds(commentIds, uid);
   }
 
-  async report(commentId: string, reportDto: ReportCommentDto, reporterUid: string) {
+  async report(
+    commentId: string,
+    reportDto: ReportCommentDto,
+    reporterUid: string,
+  ) {
     await this.findOne(commentId);
-    const existingReport = await this.commentRepository.findReport(commentId, reporterUid);
+    const existingReport = await this.commentRepository.findReport(
+      commentId,
+      reporterUid,
+    );
 
     if (existingReport) {
       throw new BadRequestException('You have already reported this comment');
@@ -335,7 +372,9 @@ export class CommentsService {
   }
 
   async updateReportStatus(id: string, updateReportDto: UpdateReportDto) {
-    return this.commentRepository.updateReport(id, { status: updateReportDto.status });
+    return this.commentRepository.updateReport(id, {
+      status: updateReportDto.status,
+    });
   }
 
   async deleteReport(id: string) {

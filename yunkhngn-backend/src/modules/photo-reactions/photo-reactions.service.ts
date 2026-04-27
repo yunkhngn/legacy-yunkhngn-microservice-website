@@ -11,7 +11,7 @@ export class PhotoReactionsService {
     @Inject(IPhotoReactionRepository)
     private readonly repository: IPhotoReactionRepository,
     private readonly notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   async addOrUpdateReaction(
     photoId: string,

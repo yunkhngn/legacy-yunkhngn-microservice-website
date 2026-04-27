@@ -26,7 +26,7 @@ export class AiService {
     private readonly projectRepository: IProjectRepository,
     @Inject(IGalleryRepository)
     private readonly galleryRepository: IGalleryRepository,
-  ) { }
+  ) {}
 
   private async getModel(): Promise<GenerativeModel> {
     let apiKey =

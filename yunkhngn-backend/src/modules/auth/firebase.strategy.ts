@@ -38,7 +38,9 @@ export class FirebaseStrategy extends PassportStrategy(Strategy, 'firebase') {
           const payload = JSON.parse(
             Buffer.from(parts[1], 'base64').toString(),
           );
-          this.logger.debug(`Token payload (aud/iss): aud=${payload.aud}, iss=${payload.iss}`);
+          this.logger.debug(
+            `Token payload (aud/iss): aud=${payload.aud}, iss=${payload.iss}`,
+          );
         }
       } catch (e) {
         this.logger.error('Failed to decode token for debugging', e.stack);

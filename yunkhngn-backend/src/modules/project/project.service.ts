@@ -9,8 +9,9 @@ export class ProjectService {
   private readonly logger = new Logger(ProjectService.name);
 
   constructor(
-    @Inject(IProjectRepository) private readonly projectRepository: IProjectRepository,
-  ) { }
+    @Inject(IProjectRepository)
+    private readonly projectRepository: IProjectRepository,
+  ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
     const data = { ...dto } as any;
@@ -35,7 +36,9 @@ export class ProjectService {
   }
 
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
-    const existing = await this.projectRepository.findBySlug(createProjectDto.slug);
+    const existing = await this.projectRepository.findBySlug(
+      createProjectDto.slug,
+    );
     if (existing) {
       throw new ConflictException('Slug already exists');
     }
@@ -57,9 +60,14 @@ export class ProjectService {
     return project;
   }
 
-  async update(id: string, updateProjectDto: UpdateProjectDto): Promise<Project> {
+  async update(
+    id: string,
+    updateProjectDto: UpdateProjectDto,
+  ): Promise<Project> {
     if (updateProjectDto.slug) {
-      const existing = await this.projectRepository.findBySlug(updateProjectDto.slug);
+      const existing = await this.projectRepository.findBySlug(
+        updateProjectDto.slug,
+      );
       if (existing && existing.id !== id) {
         throw new ConflictException('Slug already exists');
       }

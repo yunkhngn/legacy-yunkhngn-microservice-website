@@ -4,13 +4,21 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { AllExceptionsFilter, HttpExceptionFilter } from './common/filters';
-import { LoggingInterceptor, TransformInterceptor } from './common/interceptors';
+import {
+  LoggingInterceptor,
+  TransformInterceptor,
+} from './common/interceptors';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { appConfig, databaseConfig, redisConfig, firebaseConfig } from './config';
+import {
+  appConfig,
+  databaseConfig,
+  redisConfig,
+  firebaseConfig,
+} from './config';
 import { PrismaModule } from './database/prisma/prisma.module';
 
 // Domain Modules
@@ -38,7 +46,6 @@ import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.m
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
 import { NewsletterModule } from './modules/integrations/newsletter/newsletter.module';
-import { EmailModule } from './modules/integrations/email/email.module';
 
 import { HealthController } from './modules/health/health.controller';
 
@@ -115,4 +122,4 @@ import { HealthController } from './modules/health/health.controller';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

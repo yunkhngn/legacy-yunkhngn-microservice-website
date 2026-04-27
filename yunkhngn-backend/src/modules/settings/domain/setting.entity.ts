@@ -1,5 +1,5 @@
 export class Setting {
-    id: number;
-    settingTitle: string;
-    content: string;
+  id: number;
+  settingTitle: string;
+  content: string;
 }

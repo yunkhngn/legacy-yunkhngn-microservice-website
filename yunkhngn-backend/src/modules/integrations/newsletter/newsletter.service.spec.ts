@@ -5,7 +5,6 @@ import { EmailService } from '../email/email.service';
 
 describe('NewsletterService', () => {
   let service: NewsletterService;
-  let repository: ISubscriberRepository;
 
   const mockSubscriberRepository = {
     findUnique: jest.fn(),
@@ -31,7 +30,6 @@ describe('NewsletterService', () => {
     }).compile();
 
     service = module.get<NewsletterService>(NewsletterService);
-    repository = module.get<ISubscriberRepository>(ISubscriberRepository);
   });
 
   it('should be defined', () => {

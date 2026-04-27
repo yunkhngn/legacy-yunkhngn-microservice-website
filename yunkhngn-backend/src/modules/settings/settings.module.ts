@@ -20,4 +20,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [SettingsService],
 })
-export class SettingsModule { }
+export class SettingsModule {}

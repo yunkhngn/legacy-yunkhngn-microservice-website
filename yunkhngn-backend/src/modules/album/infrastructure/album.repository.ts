@@ -5,67 +5,67 @@ import { Album } from '../domain/album.entity';
 
 @Injectable()
 export class PrismaAlbumRepository implements IAlbumRepository {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-    async create(data: any): Promise<Album> {
-        return this.prisma.album.create({
-            data,
-        }) as any;
-    }
+  create(data: any): Promise<Album> {
+    return this.prisma.album.create({
+      data,
+    }) as any;
+  }
 
-    async findAll(): Promise<Album[]> {
-        const albums = await this.prisma.album.findMany({
-            orderBy: { sortOrder: 'asc' },
-            include: {
-                _count: { select: { photos: true } },
-            },
-        });
+  async findAll(): Promise<Album[]> {
+    const albums = await this.prisma.album.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: { select: { photos: true } },
+      },
+    });
 
-        return albums.map((album) => ({
-            ...album,
-            photoCount: album._count.photos,
-        })) as any;
-    }
+    return albums.map((album) => ({
+      ...album,
+      photoCount: album._count.photos,
+    })) as any;
+  }
 
-    async findById(id: string): Promise<Album | null> {
-        return this.prisma.album.findUnique({
-            where: { id },
-            include: {
-                photos: {
-                    orderBy: { sortOrder: 'asc' },
-                },
-            },
-        }) as any;
-    }
+  findById(id: string): Promise<Album | null> {
+    return this.prisma.album.findUnique({
+      where: { id },
+      include: {
+        photos: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    }) as any;
+  }
 
-    async findBySlug(slug: string): Promise<Album | null> {
-        return this.prisma.album.findUnique({
-            where: { slug },
-            include: {
-                photos: {
-                    orderBy: { sortOrder: 'asc' },
-                },
-            },
-        }) as any;
-    }
+  findBySlug(slug: string): Promise<Album | null> {
+    return this.prisma.album.findUnique({
+      where: { slug },
+      include: {
+        photos: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    }) as any;
+  }
 
-    async update(id: string, data: any): Promise<Album> {
-        return this.prisma.album.update({
-            where: { id },
-            data,
-        }) as any;
-    }
+  update(id: string, data: any): Promise<Album> {
+    return this.prisma.album.update({
+      where: { id },
+      data,
+    }) as any;
+  }
 
-    async delete(id: string): Promise<Album> {
-        return this.prisma.album.delete({
-            where: { id },
-        }) as any;
-    }
+  delete(id: string): Promise<Album> {
+    return this.prisma.album.delete({
+      where: { id },
+    }) as any;
+  }
 
-    async unassignPhotos(albumId: string): Promise<void> {
-        await this.prisma.gallery.updateMany({
-            where: { albumId },
-            data: { albumId: null },
-        });
-    }
+  async unassignPhotos(albumId: string): Promise<void> {
+    await this.prisma.gallery.updateMany({
+      where: { albumId },
+      data: { albumId: null },
+    });
+  }
 }

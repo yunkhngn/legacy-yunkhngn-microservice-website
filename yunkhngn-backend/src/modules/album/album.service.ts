@@ -15,8 +15,9 @@ export class AlbumService {
   private readonly logger = new Logger(AlbumService.name);
 
   constructor(
-    @Inject(IAlbumRepository) private readonly albumRepository: IAlbumRepository,
-  ) { }
+    @Inject(IAlbumRepository)
+    private readonly albumRepository: IAlbumRepository,
+  ) {}
 
   private generateSlug(name: string): string {
     return name

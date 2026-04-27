@@ -8,9 +8,15 @@ import { ProjectModule } from '../project/project.module';
 import { GalleryModule } from '../gallery/gallery.module';
 
 @Module({
-  imports: [ConfigModule, SettingsModule, BlogModule, ProjectModule, GalleryModule],
+  imports: [
+    ConfigModule,
+    SettingsModule,
+    BlogModule,
+    ProjectModule,
+    GalleryModule,
+  ],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],
 })
-export class AiModule { }
+export class AiModule {}

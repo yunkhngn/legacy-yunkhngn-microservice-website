@@ -9,9 +9,10 @@ export class GalleryService {
   private readonly logger = new Logger(GalleryService.name);
 
   constructor(
-    @Inject(IGalleryRepository) private readonly galleryRepository: IGalleryRepository,
+    @Inject(IGalleryRepository)
+    private readonly galleryRepository: IGalleryRepository,
     private readonly cloudinaryService: CloudinaryService,
-  ) { }
+  ) {}
 
   async create(createGalleryDto: CreateGalleryDto): Promise<Gallery> {
     this.logger.log('Adding new photo to gallery');
@@ -59,11 +60,16 @@ export class GalleryService {
     return photo;
   }
 
-  async incrementViews(id: string) {
-    this.galleryRepository.incrementViews(id).catch((err) =>
-      this.logger.error(`Failed to increment views for photo: ${id}`, err.stack)
-    );
-    return { success: true };
+  incrementViews(id: string): Promise<{ success: boolean }> {
+    void this.galleryRepository
+      .incrementViews(id)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to increment views for photo: ${id}`,
+          err.stack,
+        ),
+      );
+    return Promise.resolve({ success: true });
   }
 
   async update(

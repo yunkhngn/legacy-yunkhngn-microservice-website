@@ -17,4 +17,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [AlbumService],
 })
-export class AlbumModule { }
+export class AlbumModule {}

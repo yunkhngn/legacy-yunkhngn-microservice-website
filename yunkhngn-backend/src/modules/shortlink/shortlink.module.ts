@@ -17,4 +17,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [ShortlinkService],
 })
-export class ShortlinkModule { }
+export class ShortlinkModule {}

@@ -17,4 +17,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [LetterService],
 })
-export class LetterModule { }
+export class LetterModule {}

@@ -10,7 +10,12 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -23,7 +28,7 @@ import { FirebaseAuthGuard } from '../../common/guards';
 @ApiTags('Comments')
 @Controller('comments')
 export class CommentsController {
-  constructor(private readonly commentsService: CommentsService) { }
+  constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -35,10 +40,16 @@ export class CommentsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get comments with optional filtering by blog or project' })
+  @ApiOperation({
+    summary: 'Get comments with optional filtering by blog or project',
+  })
   @ApiQuery({ name: 'blogId', required: false })
   @ApiQuery({ name: 'projectId', required: false })
-  @ApiQuery({ name: 'includeHidden', required: false, description: 'Admin only' })
+  @ApiQuery({
+    name: 'includeHidden',
+    required: false,
+    description: 'Admin only',
+  })
   findAll(
     @Query('blogId') blogId?: string,
     @Query('projectId') projectId?: string,

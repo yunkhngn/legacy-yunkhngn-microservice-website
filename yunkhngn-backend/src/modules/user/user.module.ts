@@ -17,4 +17,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [UserService],
 })
-export class UserModule { }
+export class UserModule {}

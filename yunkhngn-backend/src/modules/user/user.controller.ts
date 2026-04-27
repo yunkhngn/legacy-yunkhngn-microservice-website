@@ -25,7 +25,7 @@ interface RequestWithUser extends Request {
 @Controller('user')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @Get('me')
   @ApiBearerAuth()
@@ -43,7 +43,12 @@ export class UserController {
   @Patch('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile' })
-  @ApiBody({ schema: { type: 'object', properties: { name: { type: 'string' }, avatarUrl: { type: 'string' } } } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, avatarUrl: { type: 'string' } },
+    },
+  })
   @UseGuards(AuthGuard('firebase'))
   async updateProfile(
     @Request() req: RequestWithUser,

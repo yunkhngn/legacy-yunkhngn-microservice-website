@@ -2,15 +2,15 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { IJournalRepository } from './domain/journal.repository.interface';
-import { Journal } from './domain/journal.entity';
 
 @Injectable()
 export class JournalService {
   private readonly logger = new Logger(JournalService.name);
 
   constructor(
-    @Inject(IJournalRepository) private readonly journalRepository: IJournalRepository,
-  ) { }
+    @Inject(IJournalRepository)
+    private readonly journalRepository: IJournalRepository,
+  ) {}
 
   async create(createJournalDto: CreateJournalDto) {
     const { tags, ...rest } = createJournalDto;

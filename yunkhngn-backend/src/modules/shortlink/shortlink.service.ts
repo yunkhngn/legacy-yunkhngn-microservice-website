@@ -15,8 +15,9 @@ export class ShortlinkService {
   private readonly logger = new Logger(ShortlinkService.name);
 
   constructor(
-    @Inject(IShortLinkRepository) private readonly shortLinkRepository: IShortLinkRepository,
-  ) { }
+    @Inject(IShortLinkRepository)
+    private readonly shortLinkRepository: IShortLinkRepository,
+  ) {}
 
   private generateCode(length = 6): string {
     const chars =
@@ -83,9 +84,14 @@ export class ShortlinkService {
     }
 
     // Increment clicks asynchronously
-    this.shortLinkRepository.incrementClicks(link.id).catch((err) =>
-      this.logger.error(`Failed to increment clicks for shortlink: ${link.id}`, err.stack)
-    );
+    this.shortLinkRepository
+      .incrementClicks(link.id)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to increment clicks for shortlink: ${link.id}`,
+          err.stack,
+        ),
+      );
 
     return { targetUrl: link.targetUrl };
   }
@@ -129,8 +135,13 @@ export class ShortlinkService {
   }
 
   async bulkUpdateStatus(ids: string[], isActive: boolean) {
-    this.logger.log(`Bulk updating status for ${ids.length} shortlinks to ${isActive}`);
-    const count = await this.shortLinkRepository.updateManyStatus(ids, isActive);
+    this.logger.log(
+      `Bulk updating status for ${ids.length} shortlinks to ${isActive}`,
+    );
+    const count = await this.shortLinkRepository.updateManyStatus(
+      ids,
+      isActive,
+    );
     return { updated: count };
   }
 }

@@ -7,7 +7,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 describe('ContactService', () => {
   let service: ContactService;
-  let repository: IContactRepository;
   let emailService: EmailService;
   let aiService: AiService;
 
@@ -45,7 +44,6 @@ describe('ContactService', () => {
     }).compile();
 
     service = module.get<ContactService>(ContactService);
-    repository = module.get<IContactRepository>(IContactRepository);
     emailService = module.get<EmailService>(EmailService);
     aiService = module.get<AiService>(AiService);
   });

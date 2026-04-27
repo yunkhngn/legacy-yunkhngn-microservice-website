@@ -12,7 +12,7 @@ export class BlogService {
   constructor(
     @Inject(IBlogRepository) private readonly blogRepository: IBlogRepository,
     private readonly newsletterService: NewsletterService,
-  ) { }
+  ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
     const existing = await this.blogRepository.findBySlug(createBlogDto.slug);
@@ -32,7 +32,9 @@ export class BlogService {
     const newBlog = await this.blogRepository.create(data);
 
     if (newBlog.status === 'PUBLISHED') {
-      this.logger.log(`New blog published: ${newBlog.title}. Sending newsletter...`);
+      this.logger.log(
+        `New blog published: ${newBlog.title}. Sending newsletter...`,
+      );
       await this.sendNewsletterForBlog(newBlog);
     }
 
@@ -67,7 +69,11 @@ export class BlogService {
       const excludeIds = [currentId, ...related.map((b) => b.id)];
       // Note: This logic could be moved to repository if it gets complex
       // For now, we'll just use what we have or add findRecent to repository
-      const recent = await this.blogRepository.findRelated(excludeIds, [], 2 - related.length);
+      const recent = await this.blogRepository.findRelated(
+        excludeIds,
+        [],
+        2 - related.length,
+      );
       related = [...related, ...recent];
     }
 
@@ -109,7 +115,9 @@ export class BlogService {
     const isNowPublished = updatedBlog.status === 'PUBLISHED';
 
     if (!wasPublished && isNowPublished) {
-      this.logger.log(`Blog ${updatedBlog.title} just got PUBLISHED! Sending newsletter...`);
+      this.logger.log(
+        `Blog ${updatedBlog.title} just got PUBLISHED! Sending newsletter...`,
+      );
       await this.sendNewsletterForBlog(updatedBlog);
     }
 
@@ -139,10 +147,11 @@ export class BlogService {
 
       const content = `
           <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-            ${blog.thumbnail
-          ? `<div style="width: 100%; height: 200px; background-image: url('${blog.thumbnail}'); background-size: cover; background-position: center;"></div>`
-          : ''
-        }
+            ${
+              blog.thumbnail
+                ? `<div style="width: 100%; height: 200px; background-image: url('${blog.thumbnail}'); background-size: cover; background-position: center;"></div>`
+                : ''
+            }
             <div style="padding: 30px;">
               <h2 style="color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 0;">New Blog Post</h2>
               <h1 style="font-size: 24px; font-weight: 700; margin: 10px 0 15px; line-height: 1.3;">
@@ -164,7 +173,10 @@ export class BlogService {
       await this.newsletterService.sendToAll(subject, content);
       this.logger.log(`Newsletter sent for blog: ${blog.title}`);
     } catch (error) {
-      this.logger.error(`Failed to send newsletter for blog: ${blog.title}`, error.stack);
+      this.logger.error(
+        `Failed to send newsletter for blog: ${blog.title}`,
+        error.stack,
+      );
     }
   }
 }

@@ -17,4 +17,4 @@ import { PrismaModule } from '../../../database/prisma/prisma.module';
     },
   ],
 })
-export class NewsletterModule { }
+export class NewsletterModule {}

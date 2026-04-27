@@ -6,7 +6,7 @@ import { FirebaseAuthGuard } from '../../common/guards';
 @ApiTags('System')
 @Controller('system')
 export class SystemController {
-  constructor(private readonly systemService: SystemService) { }
+  constructor(private readonly systemService: SystemService) {}
 
   @Get('stats')
   @ApiBearerAuth()

@@ -20,4 +20,4 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   exports: [ContactService],
 })
-export class ContactModule { }
+export class ContactModule {}
