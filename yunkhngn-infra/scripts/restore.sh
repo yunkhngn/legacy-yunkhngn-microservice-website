@@ -26,7 +26,7 @@ if [[ $confirm != [yY] ]]; then
 fi
 
 if [ -z "$MSSQL_SA_PASSWORD" ]; then
-    DB_PASS="YourStrongPassword"
+    DB_PASS="Khoadeptrai1204!"
 else
     DB_PASS="$MSSQL_SA_PASSWORD"
 fi
