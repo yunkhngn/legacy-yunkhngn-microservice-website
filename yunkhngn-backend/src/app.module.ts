@@ -6,7 +6,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AllExceptionsFilter, HttpExceptionFilter } from './common/filters';
 import {
   LoggingInterceptor,
-  TransformInterceptor,
 } from './common/interceptors';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -116,10 +115,6 @@ import { HealthController } from './modules/health/health.controller';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor,
-    },
   ],
 })
-export class AppModule {}
+export class AppModule { }
