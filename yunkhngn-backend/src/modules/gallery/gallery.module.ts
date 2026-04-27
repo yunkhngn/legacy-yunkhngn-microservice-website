@@ -16,6 +16,6 @@ import { CloudinaryModule } from '../integrations/cloudinary/cloudinary.module';
       useClass: PrismaGalleryRepository,
     },
   ],
-  exports: [GalleryService],
+  exports: [GalleryService, IGalleryRepository],
 })
-export class GalleryModule {}
+export class GalleryModule { }

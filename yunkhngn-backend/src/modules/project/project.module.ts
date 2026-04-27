@@ -15,6 +15,6 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
       useClass: PrismaProjectRepository,
     },
   ],
-  exports: [ProjectService],
+  exports: [ProjectService, IProjectRepository],
 })
-export class ProjectModule {}
+export class ProjectModule { }
