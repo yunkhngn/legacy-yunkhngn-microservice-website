@@ -100,13 +100,16 @@ export class SettingsService implements OnModuleInit {
     @Inject(ISettingsRepository)
     private readonly settingsRepository: ISettingsRepository,
     private readonly encryptionService: EncryptionService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     try {
       this.logger.log('Initializing system settings');
       for (const title of SYSTEM_SETTINGS) {
-        await this.settingsRepository.upsert(title, '');
+        const existing = await this.settingsRepository.findByTitle(title);
+        if (!existing) {
+          await this.settingsRepository.upsert(title, '');
+        }
       }
     } catch (error) {
       this.logger.error('Failed to initialize settings', error.stack);
