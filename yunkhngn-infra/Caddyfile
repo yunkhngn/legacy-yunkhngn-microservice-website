@@ -5,5 +5,17 @@ api.yunkhngn.dev {
 
 # Main Domain
 yunkhngn.dev, www.yunkhngn.dev {
-    reverse_proxy frontend:3000
+    # Điều hướng các cuộc gọi API và Socket.io sang Backend
+    handle_path /api/* {
+        reverse_proxy backend:3001
+    }
+    
+    handle_path /socket.io/* {
+        reverse_proxy backend:3001
+    }
+
+    # Còn lại thì ném vào Frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
 }
