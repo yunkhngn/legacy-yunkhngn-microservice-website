@@ -1,0 +1,4 @@
+# Auth Service Environment Variables
+DATABASE_URL=
+FIREBASE_CREDENTIALS=/app/firebase-admin-sdk.json
+PORT=3002
