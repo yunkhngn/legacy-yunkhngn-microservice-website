@@ -5,7 +5,7 @@ import { FirebaseStrategy } from './firebase.strategy';
 import { UserModule } from '../user/user.module';
 
 @Module({
-  imports: [PassportModule, UserModule],
+  imports: [PassportModule],
   providers: [FirebaseStrategy],
   exports: [PassportModule],
 })
