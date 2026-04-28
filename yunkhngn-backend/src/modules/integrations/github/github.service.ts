@@ -74,18 +74,37 @@ export class GithubService {
     }
     const octokit = await this.getOctokit();
     if (!octokit) return [];
+
+    const listPublicRepos = async (client: any) =>
+      client.request('GET /users/{username}/repos', {
+        username,
+        sort: 'updated',
+        per_page: 10,
+        type: 'public',
+      });
+
     try {
-      const { data } = await octokit.request(
-        'GET /users/{username}/repos',
-        {
-          username: username,
-          sort: 'updated',
-          per_page: 10,
-          type: 'public',
-        },
-      );
+      const { data } = await listPublicRepos(octokit);
       return data;
-    } catch (error) {
+    } catch (error: any) {
+      const hadToken = Boolean(await this.resolveToken());
+      if (error?.status === 401 && hadToken) {
+        this.logger.warn(
+          'GitHub returned 401 Bad credentials for stored token. Listing public repos without auth (regenerate github_api_key / PAT if you need authenticated access).',
+        );
+        try {
+          const { Octokit } = await eval('import("octokit")');
+          const anon = new Octokit();
+          const { data } = await listPublicRepos(anon);
+          return data;
+        } catch (fallbackErr) {
+          this.logger.error(
+            'Failed to fetch public repos (anonymous fallback)',
+            fallbackErr,
+          );
+          return [];
+        }
+      }
       this.logger.error('Failed to fetch public repos', error);
       return [];
     }
