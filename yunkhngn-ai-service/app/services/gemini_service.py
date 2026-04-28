@@ -16,7 +16,7 @@ def _get_client(api_key: str | None = None):
 async def generate_text(prompt: str, api_key: str | None = None) -> str:
     client = _get_client(api_key)
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-3-flash-preview",
         contents=prompt,
     )
     return response.text
