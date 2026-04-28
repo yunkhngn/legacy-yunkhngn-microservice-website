@@ -10,7 +10,15 @@ describe('GithubService', () => {
   let mockOctokit: any;
 
   const mockConfigService = {
-    get: jest.fn((key: string) => {
+    get: jest.fn(),
+  };
+
+  const mockSettingsService = {
+    getDecryptedSetting: jest.fn().mockResolvedValue(null),
+  };
+
+  beforeEach(async () => {
+    mockConfigService.get.mockImplementation((key: string) => {
       switch (key) {
         case 'GITHUB_API_KEY':
           return 'mock-api-key';
@@ -21,14 +29,9 @@ describe('GithubService', () => {
         default:
           return null;
       }
-    }),
-  };
+    });
+    mockSettingsService.getDecryptedSetting.mockResolvedValue(null);
 
-  const mockSettingsService = {
-    getDecryptedSetting: jest.fn().mockResolvedValue(null),
-  };
-
-  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GithubService,
@@ -51,8 +54,9 @@ describe('GithubService', () => {
     mockOctokit = {
       request: jest.fn(),
     };
-    // Manually inject mock Octokit
+    // Manually inject mock Octokit + cache key (matches resolveToken() → GITHUB_API_KEY)
     (service as any).octokit = mockOctokit;
+    (service as any).clientCacheKey = 'mock-api-key';
   });
 
   it('should be defined', () => {
@@ -81,8 +85,13 @@ describe('GithubService', () => {
       );
     });
 
-    it('should return empty array if octokit is not initialized', async () => {
+    it('should return empty array if username is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'GITHUB_USERNAME') return null;
+        return null;
+      });
       (service as any).octokit = undefined;
+      (service as any).clientCacheKey = null;
       const result = await service.getPublicRepos();
       expect(result).toEqual([]);
     });
@@ -137,8 +146,15 @@ describe('GithubService', () => {
       );
     });
 
-    it('should return empty array if octokit is not initialized', async () => {
-      (service as any).octokit = undefined;
+    it('should return empty array if API token is missing (Actions require auth)', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'GITHUB_API_KEY') return '';
+        if (key === 'GITHUB_USERNAME') return 'mock-username';
+        if (key === 'GITHUB_REPO_NAME') return 'mock-repo-name';
+        return null;
+      });
+      (service as any).octokit = mockOctokit;
+      (service as any).clientCacheKey = '__public__';
       const result = await service.getWorkflowRuns();
       expect(result).toEqual([]);
     });

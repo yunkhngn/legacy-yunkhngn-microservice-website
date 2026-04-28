@@ -1,10 +1,12 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../../settings/settings.service';
 
 @Injectable()
-export class GithubService implements OnModuleInit {
+export class GithubService {
   private octokit: any;
+  /** Cache key = token string or '__public__' so DB/env token updates refresh the client */
+  private clientCacheKey: string | null = null;
   private readonly logger = new Logger(GithubService.name);
 
   constructor(
@@ -12,36 +14,42 @@ export class GithubService implements OnModuleInit {
     private settingsService: SettingsService,
   ) {}
 
-  async onModuleInit() {
-    const token =
+  private async resolveToken(): Promise<string> {
+    return (
       (await this.settingsService.getDecryptedSetting('github_api_key')) ||
-      this.configService.get<string>('GITHUB_API_KEY');
-    const username = await this.getUsername();
-    const repoName = await this.getRepoName();
-
-    if (!username) {
-      this.logger.error('GitHub Username is not defined in settings or .env');
-    }
-    if (!repoName) {
-      this.logger.error('GitHub Repo Name is not defined in settings or .env');
-    }
-
-    if (token) {
-      try {
-        // Bypass TypeScript transpilation of dynamic import
-        const { Octokit } = await eval('import("octokit")');
-        this.octokit = new Octokit({ auth: token });
-      } catch (error) {
-        this.logger.error('Failed to load Octokit', error);
-      }
-    } else {
-      this.logger.warn(
-        'GitHub API Key not found. GitHub integration disabled.',
-      );
-    }
+      this.configService.get<string>('GITHUB_API_KEY') ||
+      ''
+    );
   }
 
-  // Helper getters for dynamic values
+  /**
+   * Returns an Octokit instance. Uses token from DB/env on each call (cached per token value).
+   * Without a token, uses unauthenticated client (stricter rate limits; OK for public repo lists).
+   */
+  private async getOctokit(): Promise<any | null> {
+    const token = await this.resolveToken();
+    const cacheKey = token || '__public__';
+    if (this.octokit && this.clientCacheKey === cacheKey) {
+      return this.octokit;
+    }
+    try {
+      const { Octokit } = await eval('import("octokit")');
+      this.octokit = token ? new Octokit({ auth: token }) : new Octokit();
+      this.clientCacheKey = cacheKey;
+      if (!token) {
+        this.logger.debug(
+          'GitHub: no API token; using unauthenticated requests (lower rate limits).',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to load Octokit', error);
+      this.octokit = null;
+      this.clientCacheKey = null;
+      return null;
+    }
+    return this.octokit;
+  }
+
   private async getUsername() {
     return (
       (await this.settingsService.getDecryptedSetting('github_username')) ||
@@ -58,9 +66,16 @@ export class GithubService implements OnModuleInit {
 
   async getPublicRepos() {
     const username = await this.getUsername();
-    if (!this.octokit || !username) return [];
+    if (!username) {
+      this.logger.warn(
+        'GitHub username not configured (settings github_username or GITHUB_USERNAME). Cannot list repos.',
+      );
+      return [];
+    }
+    const octokit = await this.getOctokit();
+    if (!octokit) return [];
     try {
-      const { data } = await this.octokit.request(
+      const { data } = await octokit.request(
         'GET /users/{username}/repos',
         {
           username: username,
@@ -80,9 +95,17 @@ export class GithubService implements OnModuleInit {
     const username = await this.getUsername();
     const repoName = await this.getRepoName();
 
-    if (!this.octokit || !username || !repoName) return [];
+    const octokit = await this.getOctokit();
+    if (!octokit || !username || !repoName) return [];
+    const token = await this.resolveToken();
+    if (!token) {
+      this.logger.warn(
+        'GitHub Actions workflows require an API token with repo scope.',
+      );
+      return [];
+    }
     try {
-      const { data } = await this.octokit.request(
+      const { data } = await octokit.request(
         'GET /repos/{owner}/{repo}/actions/runs',
         {
           owner: username,
@@ -124,10 +147,13 @@ export class GithubService implements OnModuleInit {
 
   async getLatestActivity() {
     const username = await this.getUsername();
-    if (!this.octokit || !username) return null;
+    if (!username) return null;
+
+    const octokit = await this.getOctokit();
+    if (!octokit) return null;
 
     try {
-      const { data } = await this.octokit.request(
+      const { data } = await octokit.request(
         'GET /users/{username}/events',
         {
           username,
@@ -135,7 +161,6 @@ export class GithubService implements OnModuleInit {
         },
       );
 
-      // Find first relevant event (Push, PR, Watch, Create, etc.)
       const relevantEvent = data.find((e) =>
         [
           'PushEvent',
