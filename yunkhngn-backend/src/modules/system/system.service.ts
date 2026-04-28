@@ -8,14 +8,13 @@ export class SystemService {
 
   async getStats() {
     try {
-      const [cpu, mem, osInfo, currentLoad, fsSize] =
-        await Promise.all([
-          si.cpu(),
-          si.mem(),
-          si.osInfo(),
-          si.currentLoad(),
-          si.fsSize(),
-        ]);
+      const [cpu, mem, osInfo, currentLoad, fsSize] = await Promise.all([
+        si.cpu(),
+        si.mem(),
+        si.osInfo(),
+        si.currentLoad(),
+        si.fsSize(),
+      ]);
 
       const time = si.time();
 
@@ -62,12 +61,25 @@ export class SystemService {
         this.prisma.blog.findMany({
           take: 5,
           orderBy: { createdAt: 'desc' },
-          select: { id: true, title: true, slug: true, status: true, createdAt: true, thumbnail: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            status: true,
+            createdAt: true,
+            thumbnail: true,
+          },
         }),
         this.prisma.project.findMany({
           take: 4,
           orderBy: { createdAt: 'desc' },
-          select: { id: true, title: true, slug: true, cover: true, createdAt: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            cover: true,
+            createdAt: true,
+          },
         }),
         this.prisma.gallery.findMany({
           take: 6,

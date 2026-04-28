@@ -100,7 +100,7 @@ export class SettingsService implements OnModuleInit {
     @Inject(ISettingsRepository)
     private readonly settingsRepository: ISettingsRepository,
     private readonly encryptionService: EncryptionService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     try {

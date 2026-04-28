@@ -6,7 +6,9 @@ export class MonitorService {
   private agentUrl: string;
 
   constructor(private configService: ConfigService) {
-    this.agentUrl = this.configService.get<string>('MONITOR_AGENT_URL') || 'http://monitor-agent:9100';
+    this.agentUrl =
+      this.configService.get<string>('MONITOR_AGENT_URL') ||
+      'http://monitor-agent:9100';
   }
 
   async getContainers() {
