@@ -11,6 +11,15 @@ services:
     command: --interval 60 --cleanup
     restart: unless-stopped
 
+  monitor-agent:
+    build: ./monitor-agent
+    container_name: yunkhngn-monitor
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+
   redis:
     image: redis:alpine
     container_name: yunkhngn-redis
@@ -45,6 +54,7 @@ services:
       - REDIS_HOST=redis
       - FRONTEND_URL=https://yunkhngn.dev
       - LETTER_AI_URL=http://ai-service:8000
+      - MONITOR_AGENT_URL=http://monitor-agent:9100
       - SELF_URL=http://backend:3001
     ports:
       - "3001:3001"
