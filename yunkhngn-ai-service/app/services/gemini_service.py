@@ -5,19 +5,23 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-def _get_client():
+def _get_client(api_key: str | None = None):
     settings = get_settings()
-    return genai.Client(api_key=settings.gemini_api_key)
+    # Priority: Header API Key > Environment Variable
+    final_key = api_key or settings.gemini_api_key
+    if not final_key:
+        raise ValueError("GEMINI_API_KEY is missing")
+    return genai.Client(api_key=final_key)
 
-async def generate_text(prompt: str) -> str:
-    client = _get_client()
+async def generate_text(prompt: str, api_key: str | None = None) -> str:
+    client = _get_client(api_key)
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=prompt,
     )
     return response.text
 
-async def generate_project_info(readme_content: str, language: str = "vi") -> dict:
+async def generate_project_info(readme_content: str, language: str = "vi", api_key: str | None = None) -> dict:
     lang = "Vietnamese" if language == "vi" else "English"
     prompt = f"""Analyze the following README content and extract/generate the following information in JSON format.
 Please write the content in {lang}.
@@ -34,12 +38,12 @@ Please write the content in {lang}.
 README Content:
 {readme_content[:10000]}"""
     
-    client = _get_client()
+    client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").strip()
     return json.loads(text)
 
-async def generate_blog_content(prompt: str, current_content: str | None, language: str = "vi") -> dict:
+async def generate_blog_content(prompt: str, current_content: str | None, language: str = "vi", api_key: str | None = None) -> dict:
     lang = "Vietnamese" if language == "vi" else "English"
     if current_content:
         system_prompt = f"""You are a professional blog editor. EDIT or EXTEND the following blog content.
@@ -53,7 +57,7 @@ User Instructions: {prompt}
 Return JSON: {{"title": "...", "tags": ["..."], "content": "Full HTML..."}}
 Write in {lang}. No markdown code blocks."""
     
-    client = _get_client()
+    client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-2.0-flash", contents=system_prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").replace("```html\n", "").strip()
     try:
@@ -68,7 +72,7 @@ Write in {lang}. No markdown code blocks."""
                 pass
         return {"title": "", "tags": [], "content": text}
 
-async def generate_dashboard_summary(stats: dict, recent_activities: list, language: str = "vi") -> str:
+async def generate_dashboard_summary(stats: dict, recent_activities: list, language: str = "vi", api_key: str | None = None) -> str:
     lang = "Vietnamese" if language == "vi" else "English"
     activities_text = "\n".join(
         f"- [{a.get('type','').upper()}] {a.get('action','')}: {a.get('title','')} ({a.get('timestamp','')})"
@@ -91,11 +95,11 @@ Generate:
 
 Respond in {lang}. Professional but encouraging."""
     
-    client = _get_client()
+    client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     return response.text.replace("```html\n", "").replace("\n```", "").strip()
 
-async def chat_with_context(message: str, history: list, context_data: dict, language: str = "vi") -> str:
+async def chat_with_context(message: str, history: list, context_data: dict, language: str = "vi", api_key: str | None = None) -> str:
     lang_instruction = "Always respond in Vietnamese." if language == "vi" else "Always respond in English."
     
     system_context = f"""You are the AI Assistant for Khoa Nguyen's Portfolio Admin Panel.
@@ -118,6 +122,6 @@ Instructions: Answer based on provided content. Be helpful, concise, professiona
         contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
     contents.append({"role": "user", "parts": [{"text": message}]})
 
-    client = _get_client()
+    client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-2.0-flash", contents=contents)
     return response.text
