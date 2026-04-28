@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""
+    gemini_api_key: str = ""
 
     log_level: str = "INFO"
 
