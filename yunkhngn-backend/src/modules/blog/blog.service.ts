@@ -1,4 +1,5 @@
 import { Injectable, Inject, ConflictException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { IBlogRepository } from './domain/blog.repository.interface';
@@ -12,6 +13,7 @@ export class BlogService {
   constructor(
     @Inject(IBlogRepository) private readonly blogRepository: IBlogRepository,
     private readonly newsletterService: NewsletterService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
@@ -138,7 +140,10 @@ export class BlogService {
   private async sendNewsletterForBlog(blog: Blog) {
     try {
       const subject = `New Post: ${blog.title}`;
-      const blogUrl = `${process.env.FRONTEND_URL}/blog/${blog.slug}`;
+      const frontendUrl =
+        this.configService.get<string>('app.frontendUrl') ||
+        'http://localhost:3000';
+      const blogUrl = `${frontendUrl.replace(/\/$/, '')}/blog/${blog.slug}`;
       const description = blog.seoDescription || 'Click to read full post...';
       const truncatedDescription =
         description.length > 200
