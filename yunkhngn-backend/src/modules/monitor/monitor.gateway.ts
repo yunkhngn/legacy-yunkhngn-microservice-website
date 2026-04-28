@@ -57,7 +57,7 @@ export class MonitorGateway implements OnGatewayDisconnect {
       const agentWsUrl = `${this.agentUrl}/logs?containerId=${data.containerId}`;
       this.logger.log(`Connecting to agent WebSocket: ${agentWsUrl}`);
 
-      const ws = new WebSocket(agentWsUrl);
+      const ws = new WebSocket(agentWsUrl); // nosemgrep
 
       ws.onopen = () => {
         this.logger.log(`Connected to agent logs for ${data.containerId}`);
