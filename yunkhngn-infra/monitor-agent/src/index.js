@@ -49,16 +49,20 @@ const start = async () => {
           });
 
           stream.on('data', (chunk) => {
-            // Docker stream format has an 8-byte header (1 byte type, 3 bytes padding, 4 bytes size)
-            // if it's a TTY stream it's raw, but container.logs with follow:true usually has headers
-            // We'll clean up non-printable chars or extract actual payload if needed, 
-            // but for simplicity sending clean string.
-            const cleanMessage = chunk.slice(8).toString('utf8');
-            ws.send(JSON.stringify({
-              type: 'log',
-              containerId,
-              message: cleanMessage || chunk.toString('utf8')
-            }));
+            let message = chunk.toString('utf8');
+            // Check if chunk has Docker multiplexed header signature (type <= 2, padding 0 0 0)
+            if (chunk.length >= 8 && chunk[0] <= 2 && chunk[1] === 0 && chunk[2] === 0 && chunk[3] === 0) {
+              message = chunk.slice(8).toString('utf8');
+            }
+            
+            // Send valid message lines
+            if (message) {
+              ws.send(JSON.stringify({
+                type: 'log',
+                containerId,
+                message: message.trimEnd()
+              }));
+            }
           });
         });
       } catch (err) {
