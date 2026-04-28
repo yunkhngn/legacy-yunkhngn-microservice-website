@@ -1,7 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
 import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
+
+const mockConfigService = {
+  get: jest.fn((key: string) =>
+    key === 'app.frontendUrl' ? 'http://localhost:3000' : undefined,
+  ),
+};
 
 const mockBlogRepository = {
   create: jest.fn(),
@@ -29,6 +36,7 @@ describe('BlogService', () => {
         BlogService,
         { provide: IBlogRepository, useValue: mockBlogRepository },
         { provide: NewsletterService, useValue: mockNewsletterService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
