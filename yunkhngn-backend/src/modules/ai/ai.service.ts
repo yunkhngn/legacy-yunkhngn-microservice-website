@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { IBlogRepository } from '../blog/domain/blog.repository.interface';
 import { IProjectRepository } from '../project/domain/project.repository.interface';
 import { IGalleryRepository } from '../gallery/domain/gallery.repository.interface';
+import { SettingsService } from '../settings/settings.service';
 
 export interface ProjectInfo {
   title: string;
@@ -19,6 +20,7 @@ export class AiService {
 
   constructor(
     private configService: ConfigService,
+    private settingsService: SettingsService,
     @Inject(IBlogRepository)
     private readonly blogRepository: IBlogRepository,
     @Inject(IProjectRepository)
@@ -31,9 +33,18 @@ export class AiService {
 
   private async callAiService(endpoint: string, body: any) {
     try {
+      // Get API key from database (encrypted)
+      let apiKey = await this.settingsService.getDecryptedSetting('gemini_api_key');
+      if (!apiKey) {
+        apiKey = this.configService.get<string>('GEMINI_API_KEY');
+      }
+
       const response = await fetch(`${this.aiServiceUrl}/api/v1/gemini${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': apiKey || '',
+        },
         body: JSON.stringify(body),
       });
 
