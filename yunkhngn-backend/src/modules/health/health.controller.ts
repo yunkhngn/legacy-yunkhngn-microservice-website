@@ -37,11 +37,14 @@ export class HealthController {
       (await this.settingsService.getDecryptedSetting('github_api_key')) ||
       process.env.GITHUB_API_KEY;
 
+    const geminiFromSettings =
+      await this.settingsService.getDecryptedSetting('gemini_api_key');
+
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
       services: {
-        gemini: !!process.env.GEMINI_API_KEY,
+        gemini: !!(process.env.GEMINI_API_KEY || geminiFromSettings),
         resend: !!resendKey,
         cloudflare: !!(cfZone && cfToken),
         cloudinary: !!(cloudName && apiKey),
