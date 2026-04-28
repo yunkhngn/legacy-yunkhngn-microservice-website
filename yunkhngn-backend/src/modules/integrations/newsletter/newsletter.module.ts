@@ -18,4 +18,4 @@ import { PrismaModule } from '../../../database/prisma/prisma.module';
   ],
   exports: [NewsletterService],
 })
-export class NewsletterModule { }
+export class NewsletterModule {}

@@ -18,4 +18,4 @@ import { CloudinaryModule } from '../integrations/cloudinary/cloudinary.module';
   ],
   exports: [GalleryService, IGalleryRepository],
 })
-export class GalleryModule { }
+export class GalleryModule {}

@@ -24,7 +24,9 @@ export class MonitorGateway implements OnGatewayDisconnect {
 
   constructor(private configService: ConfigService) {
     // Replace http:// with ws:// for WebSocket protocol
-    const httpUrl = this.configService.get<string>('MONITOR_AGENT_URL') || 'http://monitor-agent:9100';
+    const httpUrl =
+      this.configService.get<string>('MONITOR_AGENT_URL') ||
+      'http://monitor-agent:9100';
     this.agentUrl = httpUrl.replace(/^http/, 'ws');
   }
 
@@ -36,15 +38,17 @@ export class MonitorGateway implements OnGatewayDisconnect {
   @SubscribeMessage('monitor:subscribe')
   handleSubscribe(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { containerId: string }
+    @MessageBody() data: { containerId: string },
   ) {
     if (!data || !data.containerId) {
       client.emit('monitor:error', { message: 'Missing containerId' });
       return;
     }
 
-    this.logger.log(`Client ${client.id} subscribing to logs for ${data.containerId}`);
-    
+    this.logger.log(
+      `Client ${client.id} subscribing to logs for ${data.containerId}`,
+    );
+
     // Cleanup previous connection if any
     this.cleanupConnection(client.id);
 
@@ -52,7 +56,7 @@ export class MonitorGateway implements OnGatewayDisconnect {
       // Connect to sidecar agent using global native WebSocket (Node 22+)
       const agentWsUrl = `${this.agentUrl}/logs?containerId=${data.containerId}`;
       this.logger.log(`Connecting to agent WebSocket: ${agentWsUrl}`);
-      
+
       const ws = new WebSocket(agentWsUrl);
 
       ws.onopen = () => {
@@ -63,14 +67,20 @@ export class MonitorGateway implements OnGatewayDisconnect {
         try {
           const parsed = JSON.parse(event.data.toString());
           client.emit('monitor:log', parsed);
-        } catch (e) {
+        } catch {
           // Fallback if not JSON
-          client.emit('monitor:log', { type: 'log', message: event.data.toString() });
+          client.emit('monitor:log', {
+            type: 'log',
+            message: event.data.toString(),
+          });
         }
       };
 
       ws.onerror = (err) => {
-        this.logger.error(`Agent WebSocket error for ${data.containerId}:`, err);
+        this.logger.error(
+          `Agent WebSocket error for ${data.containerId}:`,
+          err,
+        );
         client.emit('monitor:error', { message: 'Agent WebSocket error' });
       };
 
@@ -81,7 +91,6 @@ export class MonitorGateway implements OnGatewayDisconnect {
       };
 
       this.connections.set(client.id, ws);
-
     } catch (error) {
       this.logger.error('Failed to create agent WebSocket connection', error);
       client.emit('monitor:error', { message: 'Internal gateway error' });
@@ -99,7 +108,7 @@ export class MonitorGateway implements OnGatewayDisconnect {
     if (ws) {
       try {
         ws.close();
-      } catch (e) {
+      } catch {
         // ignore
       }
       this.connections.delete(clientId);

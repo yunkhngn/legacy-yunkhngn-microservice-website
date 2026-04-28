@@ -18,7 +18,9 @@ export class SystemController {
 
   @Get('dashboard-stats')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get consolidated data metrics for admin dashboard' })
+  @ApiOperation({
+    summary: 'Get consolidated data metrics for admin dashboard',
+  })
   @UseGuards(FirebaseAuthGuard)
   async getDashboardStats() {
     return this.systemService.getDashboardStats();

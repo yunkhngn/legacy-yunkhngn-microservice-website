@@ -124,4 +124,4 @@ import { HealthController } from './modules/health/health.controller';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}
