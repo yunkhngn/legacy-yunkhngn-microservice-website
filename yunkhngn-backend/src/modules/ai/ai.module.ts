@@ -10,7 +10,6 @@ import { GalleryModule } from '../gallery/gallery.module';
 @Module({
   imports: [
     ConfigModule,
-    SettingsModule,
     BlogModule,
     ProjectModule,
     GalleryModule,
