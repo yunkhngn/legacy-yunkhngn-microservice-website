@@ -39,7 +39,7 @@ README Content:
 {readme_content[:10000]}"""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").strip()
     return json.loads(text)
 
@@ -58,7 +58,7 @@ Return JSON: {{"title": "...", "tags": ["..."], "content": "Full HTML..."}}
 Write in {lang}. No markdown code blocks."""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=system_prompt)
+    response = client.models.generate_content(model="gemini-3-flash-preview", contents=system_prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").replace("```html\n", "").strip()
     try:
         return json.loads(text)
@@ -96,7 +96,7 @@ Generate:
 Respond in {lang}. Professional but encouraging."""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
     return response.text.replace("```html\n", "").replace("\n```", "").strip()
 
 async def chat_with_context(message: str, history: list, context_data: dict, language: str = "vi", api_key: str | None = None) -> str:
@@ -123,5 +123,5 @@ Instructions: Answer based on provided content. Be helpful, concise, professiona
     contents.append({"role": "user", "parts": [{"text": message}]})
 
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=contents)
+    response = client.models.generate_content(model="gemini-3-flash-preview", contents=contents)
     return response.text
