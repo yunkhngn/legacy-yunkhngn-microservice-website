@@ -39,6 +39,7 @@ import { ShortlinkModule } from './modules/shortlink/shortlink.module';
 import { AlbumModule } from './modules/album/album.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { LetterModule } from './modules/letter/letter.module';
+import { MonitorModule } from './modules/monitor/monitor.module';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -96,6 +97,7 @@ import { HealthController } from './modules/health/health.controller';
     JournalModule,
     LastFmModule,
     LetterModule,
+    MonitorModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

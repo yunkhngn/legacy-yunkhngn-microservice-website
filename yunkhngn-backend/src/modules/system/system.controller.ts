@@ -15,4 +15,12 @@ export class SystemController {
   async getStats() {
     return this.systemService.getStats();
   }
+
+  @Get('dashboard-stats')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get consolidated data metrics for admin dashboard' })
+  @UseGuards(FirebaseAuthGuard)
+  async getDashboardStats() {
+    return this.systemService.getDashboardStats();
+  }
 }
