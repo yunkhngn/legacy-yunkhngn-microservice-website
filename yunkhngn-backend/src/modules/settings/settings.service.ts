@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { EncryptionService } from '../../common/encryption.service';
@@ -103,6 +104,7 @@ export class SettingsService implements OnModuleInit {
     @Inject(ISettingsRepository)
     private readonly settingsRepository: ISettingsRepository,
     private readonly encryptionService: EncryptionService,
+    @Inject(forwardRef(() => AiService))
     private readonly aiService: AiService,
   ) {}
 
