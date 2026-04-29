@@ -33,28 +33,31 @@ class ImageService:
         try:
             client = _get_client(api_key)
             
+            import base64
+            
             # 1. Generate image using Gemini
-            # Note: The model name might change, using the latest one from spec
             response = client.models.generate_content(
-                model='gemini-3-flash-image-preview',
-                contents=prompt,
-                config={
-                    'response_modalities': ['TEXT', 'IMAGE'],
-                }
+                model='gemini-3.1-flash-image-preview',
+                contents=[prompt],
             )
 
             text_response = ""
             image_url = None
 
-            for part in response.candidates[0].content.parts:
+            # 2. Parse response parts
+            for part in response.parts:
                 if part.text:
                     text_response += part.text
-                elif part.inline_data:
-                    # 2. Upload to Cloudinary
-                    # inline_data.data is base64 string
+                elif getattr(part, 'inline_data', None):
+                    # inline_data.data is usually bytes in the new SDK
                     mime_type = part.inline_data.mime_type or 'image/png'
-                    data_uri = f"data:{mime_type};base64,{part.inline_data.data}"
+                    data_bytes = part.inline_data.data
                     
+                    # Convert bytes to base64 string for Cloudinary
+                    b64_string = base64.b64encode(data_bytes).decode('utf-8')
+                    data_uri = f"data:{mime_type};base64,{b64_string}"
+                    
+                    # 3. Upload to Cloudinary
                     upload_result = cloudinary.uploader.upload(
                         data_uri,
                         folder="blog-portfolio/chat-generated",
