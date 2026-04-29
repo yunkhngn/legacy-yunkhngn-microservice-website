@@ -19,7 +19,7 @@ export class ChatService {
   private async callAiService(endpoint: string, body: any) {
     try {
       // Get API key from database (encrypted)
-      let apiKey = await this.settingsService.getDecryptedSetting('gemini_api_key');
+      let apiKey = await this.settingsService.getRandomApiKey();
       if (!apiKey) {
         apiKey = this.configService.get<string>('GEMINI_API_KEY');
       }
