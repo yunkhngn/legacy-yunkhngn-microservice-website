@@ -312,3 +312,16 @@ model JournalReaction {
   @@index([uid])
   @@map("journal_reactions")
 }
+
+model ChatLog {
+  id           String   @id @default(uuid())
+  userMessage  String   @db.NVarChar(Max)
+  aiResponse   String   @db.NVarChar(Max)
+  imageUrl     String?
+  language     String   @default("vi")
+  responseTime Int?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("chat_logs")
+}

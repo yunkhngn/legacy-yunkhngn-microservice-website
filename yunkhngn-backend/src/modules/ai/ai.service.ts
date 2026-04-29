@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 
@@ -18,6 +18,7 @@ export class AiService {
 
   constructor(
     private configService: ConfigService,
+    @Inject(forwardRef(() => SettingsService))
     private settingsService: SettingsService,
   ) {
     this.aiServiceUrl = this.configService.get<string>('LETTER_AI_URL') || 'http://ai-service:8000';
