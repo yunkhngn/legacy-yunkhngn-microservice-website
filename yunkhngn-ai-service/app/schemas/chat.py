@@ -9,3 +9,4 @@ class PublicChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
     language: str = "vi"
+    persona: Optional[dict] = None

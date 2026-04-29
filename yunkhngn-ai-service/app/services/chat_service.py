@@ -28,13 +28,16 @@ class ChatService:
             logger.error(f"Failed to load persona: {e}")
             return {}
 
-    def _build_system_instruction(self, context_chunks: list[dict], language: str = "vi") -> str:
+    def _build_system_instruction(self, context_chunks: list[dict], language: str = "vi", persona: dict = None) -> str:
         lang_text = "Vietnamese" if language == "vi" else "English"
         
-        identity = self.persona.get("identity", {})
-        voice = self.persona.get("voice_and_tone", {})
-        instructions = self.persona.get("instructions_for_ai", {})
-        facts = self.persona.get("knowledge_and_facts", [])
+        if persona is None:
+            persona = self.persona
+
+        identity = persona.get("identity", {})
+        voice = persona.get("voice_and_tone", {})
+        instructions = persona.get("instructions_for_ai", {})
+        facts = persona.get("knowledge_and_facts", [])
         
         # Format context
         context_text = "\n".join([f"- {c['content']}" for c in context_chunks]) if context_chunks else "No specific context found."
@@ -77,18 +80,19 @@ FINAL RULES:
         lower_msg = message.toLowerCase() if hasattr(message, 'toLowerCase') else message.lower()
         return any(kw in lower_msg for kw in image_keywords)
 
-    async def get_chat_response(self, message: str, history: list, language: str = "vi", api_key: str | None = None):
+    async def get_chat_response(self, message: str, history: list, language: str = "vi", api_key: str | None = None, persona_override: dict | None = None):
         # 1. Search RAG for context
         context_results = await rag_service.search(message, top_k=5, api_key=api_key)
         
         # 2. Build system instruction
-        system_instruction = self._build_system_instruction(context_results, language)
+        active_persona = persona_override if persona_override else self.persona
+        system_instruction = self._build_system_instruction(context_results, language, active_persona)
         
         # 3. Prepare message content for Gemini
         # We use system_instruction as the first message to set the persona
         contents = [
             {"role": "user", "parts": [{"text": system_instruction}]},
-            {"role": "model", "parts": [{"text": f"Understood. I am {self.persona.get('identity', {}).get('name')}. I will respond as myself using the provided context."}]}
+            {"role": "model", "parts": [{"text": f"Understood. I am {active_persona.get('identity', {}).get('name', 'Khoa Nguyen')}. I will respond as myself using the provided context."}]}
         ]
         
         # Add history
