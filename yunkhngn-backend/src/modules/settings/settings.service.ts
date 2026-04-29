@@ -50,6 +50,7 @@ const SYSTEM_SETTINGS = [
   'about_image_contact',
   'lastfm_api_key',
   'lastfm_username',
+  'journal_moods',
 ];
 
 const PUBLIC_SETTINGS = [
@@ -80,6 +81,7 @@ const PUBLIC_SETTINGS = [
   'comment_forbidden_keywords',
   'chat_forbidden_words',
   'ai_persona',
+  'journal_moods',
 ];
 
 const SENSITIVE_KEYS = [
