@@ -37,7 +37,7 @@ export class BlogService {
 
     // Sync to RAG if published
     if (newBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument('blog', newBlog.id, newBlog.contentJSON || newBlog.content || '', {
+      await this.aiService.syncDocument('blog', newBlog.id, newBlog.contentJSON || '', {
         title: newBlog.title,
         slug: newBlog.slug,
         tags: newBlog.tags,
@@ -124,7 +124,7 @@ export class BlogService {
 
     // Sync to RAG if published
     if (updatedBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument('blog', updatedBlog.id, updatedBlog.contentJSON || updatedBlog.content || '', {
+      await this.aiService.syncDocument('blog', updatedBlog.id, updatedBlog.contentJSON || '', {
         title: updatedBlog.title,
         slug: updatedBlog.slug,
         tags: updatedBlog.tags,
