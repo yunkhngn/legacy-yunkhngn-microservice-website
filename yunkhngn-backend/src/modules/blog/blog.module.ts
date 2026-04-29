@@ -6,9 +6,10 @@ import { PrismaBlogRepository } from './infrastructure/blog.repository';
 
 import { NewsletterModule } from '../integrations/newsletter/newsletter.module';
 import { PrismaModule } from '../../database/prisma/prisma.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
-  imports: [PrismaModule, NewsletterModule],
+  imports: [PrismaModule, NewsletterModule, AiModule],
   controllers: [BlogController],
   providers: [
     BlogService,

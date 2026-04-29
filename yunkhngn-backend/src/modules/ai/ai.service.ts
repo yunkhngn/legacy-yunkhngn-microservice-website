@@ -1,8 +1,5 @@
-import { Injectable, HttpException, HttpStatus, Inject } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IBlogRepository } from '../blog/domain/blog.repository.interface';
-import { IProjectRepository } from '../project/domain/project.repository.interface';
-import { IGalleryRepository } from '../gallery/domain/gallery.repository.interface';
 import { SettingsService } from '../settings/settings.service';
 
 export interface ProjectInfo {
@@ -21,17 +18,11 @@ export class AiService {
   constructor(
     private configService: ConfigService,
     private settingsService: SettingsService,
-    @Inject(IBlogRepository)
-    private readonly blogRepository: IBlogRepository,
-    @Inject(IProjectRepository)
-    private readonly projectRepository: IProjectRepository,
-    @Inject(IGalleryRepository)
-    private readonly galleryRepository: IGalleryRepository,
   ) {
     this.aiServiceUrl = this.configService.get<string>('LETTER_AI_URL') || 'http://ai-service:8000';
   }
 
-  private async callAiService(endpoint: string, body: any) {
+  private async callAiService(endpoint: string, body: any, base: string = '/gemini') {
     try {
       // Get API key from database (encrypted)
       let apiKey = await this.settingsService.getDecryptedSetting('gemini_api_key');
@@ -39,7 +30,7 @@ export class AiService {
         apiKey = this.configService.get<string>('GEMINI_API_KEY');
       }
 
-      const response = await fetch(`${this.aiServiceUrl}/api/v1/gemini${endpoint}`, {
+      const response = await fetch(`${this.aiServiceUrl}/api/v1${base}${endpoint}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -102,29 +93,34 @@ export class AiService {
     return data.summary;
   }
 
+  async syncDocument(type: string, id: string, content: string, metadata: any = {}, action: 'upsert' | 'delete' = 'upsert') {
+    try {
+      await this.callAiService('/sync', {
+        type,
+        action,
+        document: {
+          id,
+          type,
+          content,
+          metadata,
+        },
+      }, '/rag');
+    } catch (error) {
+      console.error(`Failed to sync ${type} ${id} to AI Service:`, error.message);
+      // We don't throw here to avoid breaking the main flow (e.g. blog save)
+    }
+  }
+
   async chatWithSystem(
     message: string,
     history: any[],
     language: string = 'vi',
   ) {
-    // 1. Fetch all relevant data from repositories
-    const blogs = await this.blogRepository.findAll();
-    const projects = await this.projectRepository.findAll();
-    const galleryRes = await this.galleryRepository.findAll({ take: 100 });
-    const gallery = galleryRes.data;
-
-    // 2. Construct context for Python service
-    const context_data = {
-      blogs: blogs.map((b: any) => `- ${b.title} (${b.status}): ${b.contentJSON.substring(0, 200)}... (Link: /blog/${b.slug})`).join('\n'),
-      projects: projects.map((p: any) => `- ${p.title}: ${p.description} (Tech: ${p.techStack}) (Link: /project/${p.slug})`).join('\n'),
-      gallery: gallery.map((g: any) => `- Photo: ${g.caption} (${new Date(g.createdAt).toISOString()})`).join('\n'),
-    };
-
     return await this.callAiService('/chat', {
       message,
       history: history.map(h => ({ role: h.role, content: h.content })),
-      context_data,
       language,
+      context_data: {},
     });
   }
 }

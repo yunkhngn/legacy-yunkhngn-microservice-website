@@ -9,6 +9,7 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { EncryptionService } from '../../common/encryption.service';
 import { ISettingsRepository } from './domain/settings.repository.interface';
 import { Setting } from './domain/setting.entity';
+import { AiService } from '../ai/ai.service';
 
 const SYSTEM_SETTINGS = [
   'bio',
@@ -102,6 +103,7 @@ export class SettingsService implements OnModuleInit {
     @Inject(ISettingsRepository)
     private readonly settingsRepository: ISettingsRepository,
     private readonly encryptionService: EncryptionService,
+    private readonly aiService: AiService,
   ) {}
 
   async onModuleInit() {
@@ -156,7 +158,17 @@ export class SettingsService implements OnModuleInit {
     }
 
     this.logger.log(`Updating setting: ${settingTitle}`);
-    return this.settingsRepository.upsert(settingTitle, content);
+    const updatedSetting = await this.settingsRepository.upsert(settingTitle, content);
+
+    // Sync to RAG if it's content-related
+    const RAG_SYNC_KEYS = ['about_content', 'skills', 'experience', 'education', 'bio'];
+    if (RAG_SYNC_KEYS.includes(settingTitle)) {
+      await this.aiService.syncDocument('setting', settingTitle, content, {
+        title: settingTitle,
+      });
+    }
+
+    return updatedSetting;
   }
 
   async delete(id: number) {
