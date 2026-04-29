@@ -19,6 +19,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - app-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   redis:
     image: redis:alpine
