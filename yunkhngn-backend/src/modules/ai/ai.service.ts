@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 
@@ -13,6 +13,7 @@ export interface ProjectInfo {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private aiServiceUrl: string;
 
   constructor(
@@ -50,7 +51,7 @@ export class AiService {
       return await response.json();
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      console.error('Error calling AI microservice:', error);
+      this.logger.error(`Error calling AI microservice: ${error.message}`, error.stack);
       throw new HttpException('Failed to connect to AI Service', HttpStatus.SERVICE_UNAVAILABLE);
     }
   }
@@ -106,7 +107,7 @@ export class AiService {
         },
       }, '/rag');
     } catch (error) {
-      console.error(`Failed to sync ${type} ${id} to AI Service:`, error.message);
+      this.logger.error(`Failed to sync ${type} ${id} to AI Service: ${error.message}`);
       // We don't throw here to avoid breaking the main flow (e.g. blog save)
     }
   }
