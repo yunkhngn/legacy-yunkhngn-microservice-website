@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
+import { ChatLogsService } from '../chat-logs/chat-logs.service';
 
 @Injectable()
 export class ChatService {
@@ -10,6 +11,7 @@ export class ChatService {
   constructor(
     private configService: ConfigService,
     private settingsService: SettingsService,
+    private chatLogsService: ChatLogsService,
   ) {
     this.aiServiceUrl = this.configService.get<string>('LETTER_AI_URL') || 'http://ai-service:8000';
   }
@@ -87,10 +89,22 @@ export class ChatService {
     }
 
     // 2. Proxy to Python AI Service
-    return await this.callAiService('/chat/public', {
+    const startTime = Date.now();
+    const result = await this.callAiService('/chat/public', {
       message: userMessage,
       history: history.map(h => ({ role: h.role, content: h.content })),
       language,
     });
+
+    // 3. Log the interaction (fire-and-forget)
+    this.chatLogsService.log({
+      userMessage,
+      aiResponse: result.text,
+      imageUrl: result.imageUrl,
+      language,
+      responseTime: Date.now() - startTime,
+    }).catch(err => this.logger.error(`Failed to log chat: ${err.message}`));
+
+    return result;
   }
 }

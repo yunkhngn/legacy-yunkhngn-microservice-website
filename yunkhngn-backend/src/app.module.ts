@@ -40,6 +40,7 @@ import { AlbumModule } from './modules/album/album.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { LetterModule } from './modules/letter/letter.module';
 import { MonitorModule } from './modules/monitor/monitor.module';
+import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -98,6 +99,7 @@ import { HealthController } from './modules/health/health.controller';
     LastFmModule,
     LetterModule,
     MonitorModule,
+    ChatLogsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
