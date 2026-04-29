@@ -90,10 +90,23 @@ export class ChatService {
 
     // 2. Proxy to Python AI Service
     const startTime = Date.now();
+    
+    // Get AI Persona from settings
+    const personaRaw = settingsMap['ai_persona'];
+    let persona = null;
+    if (personaRaw) {
+      try {
+        persona = JSON.parse(personaRaw);
+      } catch (err) {
+        this.logger.error(`Failed to parse AI persona JSON: ${err.message}`);
+      }
+    }
+
     const result = await this.callAiService('/chat/public', {
       message: userMessage,
       history: history.map(h => ({ role: h.role, content: h.content })),
       language,
+      persona,
     });
 
     // 3. Log the interaction (fire-and-forget)
