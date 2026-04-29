@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Resend } from 'resend';
 import { SettingsService } from '../../settings/settings.service';
 import {
@@ -10,12 +10,14 @@ import {
 } from './templates';
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
   private resend: Resend;
 
-  constructor(private readonly settingsService: SettingsService) {
-    void this.initResend();
+  constructor(private readonly settingsService: SettingsService) {}
+
+  async onModuleInit() {
+    await this.initResend();
   }
 
   private async initResend() {
