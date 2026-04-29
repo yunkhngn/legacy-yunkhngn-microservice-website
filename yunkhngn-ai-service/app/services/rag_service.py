@@ -20,8 +20,12 @@ class RAGService:
         self.persist_directory = os.path.join(os.getcwd(), "data", "chroma")
         os.makedirs(self.persist_directory, exist_ok=True)
         
+        from chromadb.config import Settings
         # Initialize ChromaDB persistent client
-        self.chroma_client = chromadb.PersistentClient(path=self.persist_directory)
+        self.chroma_client = chromadb.PersistentClient(
+            path=self.persist_directory,
+            settings=Settings(anonymized_telemetry=False)
+        )
         self.collection = self.chroma_client.get_or_create_collection(name="website_content")
         self.embedding_model = "gemini-embedding-2"
 
