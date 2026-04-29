@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SettingsService } from './settings.service';
 import { ISettingsRepository } from './domain/settings.repository.interface';
 import { EncryptionService } from '../../common/encryption.service';
+import { AiService } from '../ai/ai.service';
 
 const mockSettingsRepository = {
   upsert: jest.fn(),
@@ -17,6 +18,10 @@ const mockEncryptionService = {
   decrypt: jest.fn((val) => val),
 };
 
+const mockAiService = {
+  syncDocument: jest.fn(),
+};
+
 describe('SettingsService', () => {
   let service: SettingsService;
 
@@ -26,6 +31,7 @@ describe('SettingsService', () => {
         SettingsService,
         { provide: ISettingsRepository, useValue: mockSettingsRepository },
         { provide: EncryptionService, useValue: mockEncryptionService },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 

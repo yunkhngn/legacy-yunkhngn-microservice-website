@@ -71,7 +71,9 @@ export class MonitorGateway implements OnGatewayDisconnect {
         try {
           const parsed = JSON.parse(event.data.toString());
           client.emit(type === 'logs' ? 'monitor:log' : 'monitor:stats', parsed);
-        } catch {}
+        } catch {
+          // Ignore JSON parse errors
+        }
       };
 
       ws.onerror = (err) => {
@@ -102,12 +104,18 @@ export class MonitorGateway implements OnGatewayDisconnect {
 
     if (type) {
       if (conns[type]) {
-        try { conns[type].close(); } catch {}
+        try { conns[type].close(); } catch {
+          // Ignore close errors
+        }
         delete conns[type];
       }
     } else {
-      try { conns.logs?.close(); } catch {}
-      try { conns.stats?.close(); } catch {}
+      try { conns.logs?.close(); } catch {
+        // Ignore close errors
+      }
+      try { conns.stats?.close(); } catch {
+        // Ignore close errors
+      }
       this.connections.delete(clientId);
       return;
     }

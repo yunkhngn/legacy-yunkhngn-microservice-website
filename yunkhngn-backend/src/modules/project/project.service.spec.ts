@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectService } from './project.service';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { AiService } from '../ai/ai.service';
 
 const mockProjectRepository = {
   create: jest.fn(),
@@ -12,6 +13,10 @@ const mockProjectRepository = {
   delete: jest.fn(),
 };
 
+const mockAiService = {
+  syncDocument: jest.fn(),
+};
+
 describe('ProjectService', () => {
   let service: ProjectService;
 
@@ -20,6 +25,7 @@ describe('ProjectService', () => {
       providers: [
         ProjectService,
         { provide: IProjectRepository, useValue: mockProjectRepository },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 

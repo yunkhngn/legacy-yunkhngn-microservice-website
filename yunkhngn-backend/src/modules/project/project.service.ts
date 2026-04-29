@@ -3,6 +3,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { Project } from './domain/project.entity';
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class ProjectService {
@@ -11,6 +12,7 @@ export class ProjectService {
   constructor(
     @Inject(IProjectRepository)
     private readonly projectRepository: IProjectRepository,
+    private readonly aiService: AiService,
   ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
@@ -45,7 +47,16 @@ export class ProjectService {
 
     const data = this.mapDtoToEntityData(createProjectDto);
     this.logger.log(`Creating new project: ${createProjectDto.title}`);
-    return this.projectRepository.create(data);
+    const project = await this.projectRepository.create(data);
+    
+    // Sync to RAG
+    await this.aiService.syncDocument('project', project.id, project.content || project.description || '', {
+      title: project.title,
+      slug: project.slug,
+      techStack: project.techStack,
+    });
+    
+    return project;
   }
 
   async findAll(): Promise<Project[]> {
@@ -75,11 +86,24 @@ export class ProjectService {
 
     const data = this.mapDtoToEntityData(updateProjectDto);
     this.logger.log(`Updating project ID: ${id}`);
-    return this.projectRepository.update(id, data);
+    const project = await this.projectRepository.update(id, data);
+    
+    // Sync to RAG
+    await this.aiService.syncDocument('project', project.id, project.content || project.description || '', {
+      title: project.title,
+      slug: project.slug,
+      techStack: project.techStack,
+    });
+    
+    return project;
   }
 
   async remove(id: string): Promise<Project> {
     this.logger.log(`Removing project ID: ${id}`);
-    return this.projectRepository.delete(id);
+    const project = await this.projectRepository.delete(id);
+    if (project) {
+      await this.aiService.syncDocument('project', id, '', {}, 'delete');
+    }
+    return project;
   }
 }

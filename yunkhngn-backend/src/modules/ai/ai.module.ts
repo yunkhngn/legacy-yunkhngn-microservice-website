@@ -3,17 +3,12 @@ import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
 import { ConfigModule } from '@nestjs/config';
 import { SettingsModule } from '../settings/settings.module';
-import { BlogModule } from '../blog/blog.module';
-import { ProjectModule } from '../project/project.module';
-import { GalleryModule } from '../gallery/gallery.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
     ConfigModule,
-    SettingsModule,
-    BlogModule,
-    ProjectModule,
-    GalleryModule,
+    forwardRef(() => SettingsModule),
   ],
   controllers: [AiController],
   providers: [AiService],

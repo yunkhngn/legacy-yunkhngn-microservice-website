@@ -5,10 +5,12 @@ import { EncryptionService } from '../../common/encryption.service';
 import { ISettingsRepository } from './domain/settings.repository.interface';
 import { PrismaSettingsRepository } from './infrastructure/settings.repository';
 import { PrismaModule } from '../../database/prisma/prisma.module';
+import { AiModule } from '../ai/ai.module';
+import { forwardRef } from '@nestjs/common';
 
 @Global()
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, forwardRef(() => AiModule)],
   controllers: [SettingsController],
   providers: [
     SettingsService,

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
 import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
+import { AiService } from '../ai/ai.service';
 
 const mockConfigService = {
   get: jest.fn((key: string) =>
@@ -26,6 +27,10 @@ const mockNewsletterService = {
   sendToAll: jest.fn(),
 };
 
+const mockAiService = {
+  syncDocument: jest.fn(),
+};
+
 describe('BlogService', () => {
   let service: BlogService;
   let repository: typeof mockBlogRepository;
@@ -37,6 +42,7 @@ describe('BlogService', () => {
         { provide: IBlogRepository, useValue: mockBlogRepository },
         { provide: NewsletterService, useValue: mockNewsletterService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 

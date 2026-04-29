@@ -4,9 +4,10 @@ import { ProjectService } from './project.service';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { PrismaProjectRepository } from './infrastructure/project.repository';
 import { PrismaModule } from '../../database/prisma/prisma.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AiModule],
   controllers: [ProjectController],
   providers: [
     ProjectService,
