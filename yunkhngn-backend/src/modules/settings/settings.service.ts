@@ -98,7 +98,7 @@ const SENSITIVE_KEYS = [
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
-  private readonly logger = new Logger(SettingsService.name);
+  private readonly logger: Logger;
 
   constructor(
     @Inject(ISettingsRepository)
@@ -106,7 +106,9 @@ export class SettingsService implements OnModuleInit {
     private readonly encryptionService: EncryptionService,
     @Inject(forwardRef(() => AiService))
     private readonly aiService: AiService,
-  ) {}
+  ) {
+    this.logger = new Logger(SettingsService.name);
+  }
 
   async onModuleInit() {
     try {
@@ -197,7 +199,7 @@ export class SettingsService implements OnModuleInit {
 
       return setting.content;
     } catch (error) {
-      this.logger.warn(
+      this.logger?.warn(
         `Failed to fetch and decrypt setting: ${title}`,
         error.message,
       );
