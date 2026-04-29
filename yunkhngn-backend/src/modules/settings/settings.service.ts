@@ -31,6 +31,7 @@ const SYSTEM_SETTINGS = [
   'skills',
   'cv_url',
   'gemini_api_key',
+  'gemini_api_keys',
   'ai_persona',
   'cloudinary_cloud_name',
   'cloudinary_api_key',
@@ -88,6 +89,7 @@ const PUBLIC_SETTINGS = [
 
 const SENSITIVE_KEYS = [
   'gemini_api_key',
+  'gemini_api_keys',
   'cloudinary_api_secret',
   'resend_api_key',
   'cloudflare_api_token',
@@ -205,5 +207,31 @@ export class SettingsService implements OnModuleInit {
       );
       return null;
     }
+  }
+
+  async getRandomApiKey(): Promise<string | null> {
+    // 1. Try the multi-key pool first
+    const multiKeyRaw = await this.getDecryptedSetting('gemini_api_keys');
+    if (multiKeyRaw) {
+      try {
+        // Stored as JSON array: ["key1", "key2", "key3"]
+        const keys: string[] = JSON.parse(multiKeyRaw);
+        const validKeys = keys.filter((k) => k && k.trim().length > 0);
+        if (validKeys.length > 0) {
+          const randomIndex = Math.floor(Math.random() * validKeys.length);
+          this.logger.debug(
+            `Picked API key ${randomIndex + 1}/${validKeys.length}`,
+          );
+          return validKeys[randomIndex];
+        }
+      } catch {
+        this.logger.warn(
+          'gemini_api_keys is not valid JSON, falling back to single key',
+        );
+      }
+    }
+
+    // 2. Fallback to single key
+    return this.getDecryptedSetting('gemini_api_key');
   }
 }
