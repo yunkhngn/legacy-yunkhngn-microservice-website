@@ -18,6 +18,8 @@ async function bootstrap() {
   const aiService = app.get(AiService);
 
   try {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     // 1. Sync Settings
     logger.log('Syncing Settings...');
     const settingsToSync = ['about_content', 'skills', 'experience', 'education', 'bio'];
@@ -26,6 +28,7 @@ async function bootstrap() {
       if (content) {
         await aiService.syncDocument('setting', key, content, { title: key });
         logger.log(`Synced setting: ${key}`);
+        await delay(2000); // 2 second delay
       }
     }
 
@@ -40,6 +43,7 @@ async function bootstrap() {
           tags: blog.tags || '',
         });
         logger.log(`Synced blog: ${blog.title}`);
+        await delay(2000); // 2 second delay
       }
     }
 
@@ -54,6 +58,7 @@ async function bootstrap() {
         techStack: project.techStack || '',
       });
       logger.log(`Synced project: ${project.title}`);
+      await delay(2000); // 2 second delay
     }
 
     logger.log('RAG Synchronization completed successfully!');
