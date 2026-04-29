@@ -33,7 +33,7 @@ export class ChatService {
     private settingsService: SettingsService,
     private projectService: ProjectService,
     private blogService: BlogService,
-  ) {}
+  ) { }
 
   /**
    * Detect if the user's message is asking for image generation.
@@ -334,7 +334,7 @@ A: Không hẳn. Tớ chỉ build đều, sai đều, sửa đều. Kỹ năng �
               : '';
           const truncated = content.split(' ').slice(0, 200).join(' ');
           return `- Title: ${p.title}
-        Link: /projects/${p.id}
+        Link: /project/${p.slug}
         Preview: ${truncated}...`;
         })
         .join('\n\n')}

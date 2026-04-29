@@ -115,8 +115,8 @@ export class AiService {
 
     // 2. Construct context for Python service
     const context_data = {
-      blogs: blogs.map((b: any) => `- ${b.title} (${b.status}): ${b.contentJSON.substring(0, 200)}...`).join('\n'),
-      projects: projects.map((p: any) => `- ${p.title}: ${p.description} (Tech: ${p.techStack})`).join('\n'),
+      blogs: blogs.map((b: any) => `- ${b.title} (${b.status}): ${b.contentJSON.substring(0, 200)}... (Link: /blog/${b.slug})`).join('\n'),
+      projects: projects.map((p: any) => `- ${p.title}: ${p.description} (Tech: ${p.techStack}) (Link: /project/${p.slug})`).join('\n'),
       gallery: gallery.map((g: any) => `- Photo: ${g.caption} (${new Date(g.createdAt).toISOString()})`).join('\n'),
     };
 
