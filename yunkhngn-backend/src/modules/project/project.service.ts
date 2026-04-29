@@ -50,7 +50,7 @@ export class ProjectService {
     const project = await this.projectRepository.create(data);
     
     // Sync to RAG
-    await this.aiService.syncDocument('project', project.id, project.content || project.description || '', {
+    await this.aiService.syncDocument('project', project.id, project.contentJSON || project.description || '', {
       title: project.title,
       slug: project.slug,
       techStack: project.techStack,
@@ -89,7 +89,7 @@ export class ProjectService {
     const project = await this.projectRepository.update(id, data);
     
     // Sync to RAG
-    await this.aiService.syncDocument('project', project.id, project.content || project.description || '', {
+    await this.aiService.syncDocument('project', project.id, project.contentJSON || project.description || '', {
       title: project.title,
       slug: project.slug,
       techStack: project.techStack,

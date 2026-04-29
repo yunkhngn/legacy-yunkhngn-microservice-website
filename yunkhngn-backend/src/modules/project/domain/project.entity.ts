@@ -3,9 +3,11 @@ export class Project {
   slug: string;
   title: string;
   description?: string;
-  content?: string;
+  contentJSON?: string;
+  techStack?: string;
   cover?: string;
   demoLink?: string;
+  repoLink?: string;
   githubLink?: string;
   tags?: string;
   createdAt: Date;
