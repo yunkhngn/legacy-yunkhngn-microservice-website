@@ -47,7 +47,4 @@ else
     # Cleanup old backups
     echo "[$(date)] 🧹 Cleaning up older than $RETENTION_DAYS days..." >> "$LOG_FILE"
     find "$BACKUP_DIR_HOST" -type f \( -name "*.bak" -o -name "backup_log.txt" \) -mtime +$RETENTION_DAYS -exec rm -f {} \;
-else
-    echo "[$(date)] ❌ Backup failed!" >> "$LOG_FILE"
-    exit 1
 fi
