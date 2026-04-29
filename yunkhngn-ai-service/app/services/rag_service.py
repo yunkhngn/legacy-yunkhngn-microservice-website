@@ -23,7 +23,7 @@ class RAGService:
         # Initialize ChromaDB persistent client
         self.chroma_client = chromadb.PersistentClient(path=self.persist_directory)
         self.collection = self.chroma_client.get_or_create_collection(name="website_content")
-        self.embedding_model = "embedding-001"
+        self.embedding_model = "gemini-embedding-2"
 
     def chunk_text(self, text: str, max_chars: int = 2000, overlap: int = 200) -> list[str]:
         """
