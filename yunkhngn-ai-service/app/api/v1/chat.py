@@ -34,7 +34,8 @@ async def public_chat(
             message=request.message,
             history=[{"role": m.role, "content": m.content} for m in request.history],
             language=request.language,
-            api_key=x_gemini_api_key
+            api_key=x_gemini_api_key,
+            persona_override=request.persona
         )
         return {
             "text": result["text"],
