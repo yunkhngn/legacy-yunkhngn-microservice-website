@@ -209,29 +209,80 @@ export class SettingsService implements OnModuleInit {
     }
   }
 
+  // --- Internal: get the raw key array from DB ---
+  private async _getKeyArray(): Promise<string[]> {
+    const raw = await this.getDecryptedSetting('gemini_api_keys');
+    if (!raw) return [];
+    try {
+      const keys: string[] = JSON.parse(raw);
+      return keys.filter((k) => k && k.trim().length > 0);
+    } catch {
+      this.logger.warn('gemini_api_keys is not valid JSON');
+      return [];
+    }
+  }
+
+  private async _saveKeyArray(keys: string[]): Promise<void> {
+    const content = JSON.stringify(keys);
+    const encrypted = this.encryptionService.encrypt(content);
+    await this.settingsRepository.upsert('gemini_api_keys', encrypted);
+  }
+
   async getRandomApiKey(): Promise<string | null> {
     // 1. Try the multi-key pool first
-    const multiKeyRaw = await this.getDecryptedSetting('gemini_api_keys');
-    if (multiKeyRaw) {
-      try {
-        // Stored as JSON array: ["key1", "key2", "key3"]
-        const keys: string[] = JSON.parse(multiKeyRaw);
-        const validKeys = keys.filter((k) => k && k.trim().length > 0);
-        if (validKeys.length > 0) {
-          const randomIndex = Math.floor(Math.random() * validKeys.length);
-          this.logger.debug(
-            `Picked API key ${randomIndex + 1}/${validKeys.length}`,
-          );
-          return validKeys[randomIndex];
-        }
-      } catch {
-        this.logger.warn(
-          'gemini_api_keys is not valid JSON, falling back to single key',
-        );
-      }
+    const validKeys = await this._getKeyArray();
+    if (validKeys.length > 0) {
+      const randomIndex = Math.floor(Math.random() * validKeys.length);
+      this.logger.debug(`Picked API key ${randomIndex + 1}/${validKeys.length}`);
+      return validKeys[randomIndex];
     }
 
     // 2. Fallback to single key
     return this.getDecryptedSetting('gemini_api_key');
+  }
+
+  async listApiKeys(): Promise<{ keys: { index: number; masked: string; prefix: string }[]; count: number }> {
+    const keys = await this._getKeyArray();
+    return {
+      count: keys.length,
+      keys: keys.map((k, i) => ({
+        index: i,
+        masked: k.substring(0, 8) + '...' + k.substring(k.length - 4),
+        prefix: k.substring(0, 8),
+      })),
+    };
+  }
+
+  async addApiKey(key: string): Promise<{ message: string; count: number }> {
+    if (!key || key.trim().length === 0) {
+      throw new BadRequestException('API key cannot be empty');
+    }
+
+    const keys = await this._getKeyArray();
+
+    // Check duplicate by prefix
+    if (keys.some((k) => k === key.trim())) {
+      throw new BadRequestException('This API key already exists in the pool');
+    }
+
+    keys.push(key.trim());
+    await this._saveKeyArray(keys);
+
+    this.logger.log(`Added API key to pool (total: ${keys.length})`);
+    return { message: 'API key added successfully', count: keys.length };
+  }
+
+  async removeApiKey(index: number): Promise<{ message: string; count: number }> {
+    const keys = await this._getKeyArray();
+
+    if (index < 0 || index >= keys.length) {
+      throw new BadRequestException(`Invalid key index: ${index}. Pool has ${keys.length} keys.`);
+    }
+
+    const removed = keys.splice(index, 1);
+    await this._saveKeyArray(keys);
+
+    this.logger.log(`Removed API key ${removed[0].substring(0, 8)}... from pool (remaining: ${keys.length})`);
+    return { message: 'API key removed successfully', count: keys.length };
   }
 }

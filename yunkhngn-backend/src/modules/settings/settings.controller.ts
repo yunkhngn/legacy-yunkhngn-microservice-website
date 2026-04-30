@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Body,
   Patch,
   Param,
@@ -32,6 +33,35 @@ export class SettingsController {
   getAdminSettings() {
     return this.settingsService.getAdminSettings();
   }
+
+  // --- Gemini API Keys Pool Management ---
+  // These must be defined BEFORE the :id param routes to avoid route conflicts
+
+  @Get('api-keys')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all Gemini API keys (masked)' })
+  @UseGuards(FirebaseAuthGuard)
+  listApiKeys() {
+    return this.settingsService.listApiKeys();
+  }
+
+  @Post('api-keys/add')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a Gemini API key to the pool' })
+  @UseGuards(FirebaseAuthGuard)
+  addApiKey(@Body('key') key: string) {
+    return this.settingsService.addApiKey(key);
+  }
+
+  @Delete('api-keys/:index')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a Gemini API key from the pool by index' })
+  @UseGuards(FirebaseAuthGuard)
+  removeApiKey(@Param('index') index: string) {
+    return this.settingsService.removeApiKey(+index);
+  }
+
+  // --- Generic Settings CRUD ---
 
   @Patch()
   @ApiBearerAuth()
