@@ -325,3 +325,16 @@ model ChatLog {
   @@index([createdAt])
   @@map("chat_logs")
 }
+
+model KnowledgeEntry {
+  id        String   @id @default(uuid())
+  category  String   @default("general")
+  title     String
+  content   String   @db.NVarChar(Max)
+  synced    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("knowledge_entries")
+}
