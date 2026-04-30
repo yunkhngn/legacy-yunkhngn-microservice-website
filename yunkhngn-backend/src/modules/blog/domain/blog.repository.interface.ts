@@ -2,7 +2,7 @@ import { Blog } from './blog.entity';
 
 export interface IBlogRepository {
   create(data: Partial<Blog>): Promise<Blog>;
-  findAll(): Promise<Blog[]>;
+  findAll(limit?: number): Promise<Blog[]>;
   findBySlugOrId(slugOrId: string): Promise<Blog | null>;
   findBySlug(slug: string): Promise<Blog | null>;
   findById(id: string): Promise<Blog | null>;

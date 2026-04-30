@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProjectService } from './project.service';
@@ -34,8 +35,8 @@ export class ProjectController {
 
   @Get()
   @ApiOperation({ summary: 'Get all projects' })
-  findAll() {
-    return this.projectService.findAll();
+  findAll(@Query('limit') limit?: number) {
+    return this.projectService.findAll(limit);
   }
 
   @Get(':id')
