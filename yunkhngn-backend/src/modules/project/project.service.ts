@@ -59,8 +59,8 @@ export class ProjectService {
     return project;
   }
 
-  async findAll(): Promise<Project[]> {
-    return this.projectRepository.findAll();
+  async findAll(limit?: number): Promise<Project[]> {
+    return this.projectRepository.findAll(limit);
   }
 
   async findOne(idOrSlug: string): Promise<Project | null> {

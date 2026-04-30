@@ -13,8 +13,9 @@ export class PrismaBlogRepository implements IBlogRepository {
     });
   }
 
-  findAll(): Promise<Blog[]> {
+  findAll(limit?: number): Promise<Blog[]> {
     return this.prisma.blog.findMany({
+      take: limit ? Number(limit) : undefined,
       orderBy: { createdAt: 'desc' },
     });
   }

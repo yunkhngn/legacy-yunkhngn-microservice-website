@@ -13,8 +13,9 @@ export class PrismaProjectRepository implements IProjectRepository {
     });
   }
 
-  async findAll(): Promise<Project[]> {
+  async findAll(limit?: number): Promise<Project[]> {
     return this.prisma.project.findMany({
+      take: limit ? Number(limit) : undefined,
       orderBy: { createdAt: 'desc' },
     });
   }

@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BlogService } from './blog.service';
@@ -34,8 +35,8 @@ export class BlogController {
 
   @Get()
   @ApiOperation({ summary: 'Get all blog posts' })
-  findAll() {
-    return this.blogService.findAll();
+  findAll(@Query('limit') limit?: number) {
+    return this.blogService.findAll(limit);
   }
 
   @Get(':slug')

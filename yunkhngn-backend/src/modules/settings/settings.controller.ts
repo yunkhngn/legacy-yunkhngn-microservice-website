@@ -7,18 +7,23 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { FirebaseAuthGuard } from '../../common/guards';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Settings')
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('public_settings')
+  @CacheTTL(600) // Cache for 10 minutes
   @ApiOperation({ summary: 'Get public settings' })
   getSettings() {
     return this.settingsService.getSettings();
