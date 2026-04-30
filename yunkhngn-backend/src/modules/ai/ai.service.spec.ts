@@ -17,6 +17,7 @@ describe('AiService', () => {
 
   const mockSettingsService = {
     getDecryptedSetting: jest.fn().mockResolvedValue(null),
+    getRandomApiKey: jest.fn().mockResolvedValue('mock-random-key'),
   };
 
   beforeEach(async () => {
@@ -31,7 +32,8 @@ describe('AiService', () => {
     service = module.get<AiService>(AiService);
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ text: 'mock response', content: 'mock content' }),
+      json: () =>
+        Promise.resolve({ text: 'mock response', content: 'mock content' }),
     } as unknown as Response);
   });
 
@@ -48,7 +50,7 @@ describe('AiService', () => {
     await service.generateText('hello');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/gemini/generate'),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 });

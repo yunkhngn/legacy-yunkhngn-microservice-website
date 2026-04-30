@@ -13,8 +13,10 @@ export class FirebaseStrategy extends PassportStrategy(Strategy, 'firebase') {
 
   async validate(token: string) {
     try {
-      const authUrl = this.configService.get<string>('AUTH_SERVICE_URL') || 'http://auth-service:3002';
-      
+      const authUrl =
+        this.configService.get<string>('AUTH_SERVICE_URL') ||
+        'http://auth-service:3002';
+
       const response = await fetch(`${authUrl}/auth/validate-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -27,7 +29,10 @@ export class FirebaseStrategy extends PassportStrategy(Strategy, 'firebase') {
 
       return await response.json();
     } catch (error) {
-      this.logger.error('Token validation via auth-service failed', error.stack);
+      this.logger.error(
+        'Token validation via auth-service failed',
+        error.stack,
+      );
       throw new UnauthorizedException('Invalid token');
     }
   }

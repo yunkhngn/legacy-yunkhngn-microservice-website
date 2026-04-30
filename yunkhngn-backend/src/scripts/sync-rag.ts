@@ -19,11 +19,18 @@ async function bootstrap() {
   const aiService = app.get(AiService);
 
   try {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
     // 1. Sync Settings
     logger.log('Syncing Settings...');
-    const settingsToSync = ['about_content', 'skills', 'experience', 'education', 'bio'];
+    const settingsToSync = [
+      'about_content',
+      'skills',
+      'experience',
+      'education',
+      'bio',
+    ];
     for (const key of settingsToSync) {
       const content = await settingsService.getDecryptedSetting(key);
       if (content) {
@@ -53,11 +60,16 @@ async function bootstrap() {
     const projects = await projectService.findAll();
     for (const project of projects) {
       const fullContent = `${project.title}\n\n${project.description || ''}\n\n${project.contentJSON || ''}`;
-      await aiService.syncDocument('project', project.id.toString(), fullContent, {
-        title: project.title,
-        description: project.description || '',
-        techStack: project.techStack || '',
-      });
+      await aiService.syncDocument(
+        'project',
+        project.id.toString(),
+        fullContent,
+        {
+          title: project.title,
+          description: project.description || '',
+          techStack: project.techStack || '',
+        },
+      );
       logger.log(`Synced project: ${project.title}`);
       await delay(2000); // 2 second delay
     }
@@ -66,7 +78,9 @@ async function bootstrap() {
     logger.log('Syncing Knowledge Entries...');
     const knowledgeService = app.get(KnowledgeService);
     const knowledgeResult = await knowledgeService.syncAll();
-    logger.log(`Synced ${knowledgeResult.synced} knowledge entries (${knowledgeResult.failed} failed)`);
+    logger.log(
+      `Synced ${knowledgeResult.synced} knowledge entries (${knowledgeResult.failed} failed)`,
+    );
 
     logger.log('RAG Synchronization completed successfully!');
   } catch (error) {
@@ -76,4 +90,7 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Fatal error during sync:', err);
+  process.exit(1);
+});

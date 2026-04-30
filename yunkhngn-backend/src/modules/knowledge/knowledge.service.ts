@@ -56,7 +56,9 @@ export class KnowledgeService {
     try {
       await this.aiService.syncDocument('knowledge', id, '', {}, 'delete');
     } catch (error) {
-      this.logger.error(`Failed to delete knowledge ${id} from RAG: ${error.message}`);
+      this.logger.error(
+        `Failed to delete knowledge ${id} from RAG: ${error.message}`,
+      );
     }
 
     return entry;
@@ -72,7 +74,9 @@ export class KnowledgeService {
       await this.knowledgeRepository.update(entry.id, { synced: true });
       this.logger.log(`Synced knowledge entry: ${entry.title}`);
     } catch (error) {
-      this.logger.error(`Failed to sync knowledge ${entry.id}: ${error.message}`);
+      this.logger.error(
+        `Failed to sync knowledge ${entry.id}: ${error.message}`,
+      );
       await this.knowledgeRepository.update(entry.id, { synced: false });
     }
   }

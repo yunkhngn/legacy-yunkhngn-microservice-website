@@ -164,10 +164,19 @@ export class SettingsService implements OnModuleInit {
     }
 
     this.logger.log(`Updating setting: ${settingTitle}`);
-    const updatedSetting = await this.settingsRepository.upsert(settingTitle, content);
+    const updatedSetting = await this.settingsRepository.upsert(
+      settingTitle,
+      content,
+    );
 
     // Sync to RAG if it's content-related
-    const RAG_SYNC_KEYS = ['about_content', 'skills', 'experience', 'education', 'bio'];
+    const RAG_SYNC_KEYS = [
+      'about_content',
+      'skills',
+      'experience',
+      'education',
+      'bio',
+    ];
     if (RAG_SYNC_KEYS.includes(settingTitle)) {
       await this.aiService.syncDocument('setting', settingTitle, content, {
         title: settingTitle,
@@ -228,12 +237,14 @@ export class SettingsService implements OnModuleInit {
     await this.settingsRepository.upsert('gemini_api_keys', encrypted);
   }
 
-  async getRandomApiKey(): Promise<string | null> {
+  async getRandomApiKey() {
     // 1. Try the multi-key pool first
     const validKeys = await this._getKeyArray();
     if (validKeys.length > 0) {
       const randomIndex = Math.floor(Math.random() * validKeys.length);
-      this.logger.debug(`Picked API key ${randomIndex + 1}/${validKeys.length}`);
+      this.logger.debug(
+        `Picked API key ${randomIndex + 1}/${validKeys.length}`,
+      );
       return validKeys[randomIndex];
     }
 
@@ -241,7 +252,10 @@ export class SettingsService implements OnModuleInit {
     return this.getDecryptedSetting('gemini_api_key');
   }
 
-  async listApiKeys(): Promise<{ keys: { index: number; masked: string; prefix: string }[]; count: number }> {
+  async listApiKeys(): Promise<{
+    keys: { index: number; masked: string; prefix: string }[];
+    count: number;
+  }> {
     const keys = await this._getKeyArray();
     return {
       count: keys.length,
@@ -272,17 +286,23 @@ export class SettingsService implements OnModuleInit {
     return { message: 'API key added successfully', count: keys.length };
   }
 
-  async removeApiKey(index: number): Promise<{ message: string; count: number }> {
+  async removeApiKey(
+    index: number,
+  ): Promise<{ message: string; count: number }> {
     const keys = await this._getKeyArray();
 
     if (index < 0 || index >= keys.length) {
-      throw new BadRequestException(`Invalid key index: ${index}. Pool has ${keys.length} keys.`);
+      throw new BadRequestException(
+        `Invalid key index: ${index}. Pool has ${keys.length} keys.`,
+      );
     }
 
     const removed = keys.splice(index, 1);
     await this._saveKeyArray(keys);
 
-    this.logger.log(`Removed API key ${removed[0].substring(0, 8)}... from pool (remaining: ${keys.length})`);
+    this.logger.log(
+      `Removed API key ${removed[0].substring(0, 8)}... from pool (remaining: ${keys.length})`,
+    );
     return { message: 'API key removed successfully', count: keys.length };
   }
 }

@@ -6,10 +6,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
-  imports: [
-    ConfigModule,
-    forwardRef(() => SettingsModule),
-  ],
+  imports: [ConfigModule, forwardRef(() => SettingsModule)],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],

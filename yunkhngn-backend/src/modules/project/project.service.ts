@@ -48,14 +48,19 @@ export class ProjectService {
     const data = this.mapDtoToEntityData(createProjectDto);
     this.logger.log(`Creating new project: ${createProjectDto.title}`);
     const project = await this.projectRepository.create(data);
-    
+
     // Sync to RAG
-    await this.aiService.syncDocument('project', project.id, project.contentJSON || project.description || '', {
-      title: project.title,
-      slug: project.slug,
-      techStack: project.techStack,
-    });
-    
+    await this.aiService.syncDocument(
+      'project',
+      project.id,
+      project.contentJSON || project.description || '',
+      {
+        title: project.title,
+        slug: project.slug,
+        techStack: project.techStack,
+      },
+    );
+
     return project;
   }
 
@@ -87,14 +92,19 @@ export class ProjectService {
     const data = this.mapDtoToEntityData(updateProjectDto);
     this.logger.log(`Updating project ID: ${id}`);
     const project = await this.projectRepository.update(id, data);
-    
+
     // Sync to RAG
-    await this.aiService.syncDocument('project', project.id, project.contentJSON || project.description || '', {
-      title: project.title,
-      slug: project.slug,
-      techStack: project.techStack,
-    });
-    
+    await this.aiService.syncDocument(
+      'project',
+      project.id,
+      project.contentJSON || project.description || '',
+      {
+        title: project.title,
+        slug: project.slug,
+        techStack: project.techStack,
+      },
+    );
+
     return project;
   }
 
