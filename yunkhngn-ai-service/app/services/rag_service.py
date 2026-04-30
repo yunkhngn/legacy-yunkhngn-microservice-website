@@ -101,17 +101,20 @@ class RAGService:
             )
         logger.info(f"Indexed {len(chunks)} chunks for {doc_type} {doc_id}")
 
-    async def search(self, query: str, top_k: int = 3, api_key: str | None = None) -> list[dict]:
+    async def search(self, query: str, top_k: int = 5, api_key: str | None = None) -> list[dict]:
         query_embedding = await self.get_embedding(query, api_key)
+        
+        # Fetch more candidates than needed so dedup still has enough results
+        fetch_k = top_k * 3
         
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k
+            n_results=fetch_k
         )
         
-        # Distance threshold (smaller is better for L2)
-        # 1.0 - 1.2 is a reasonable threshold for Gemini embeddings
-        THRESHOLD = 1.1 
+        # Relaxed distance threshold for better recall
+        # Gemini embedding L2 distances: <0.8 = very close, 0.8-1.2 = related, >1.5 = unrelated
+        THRESHOLD = 1.4
         
         formatted_results = []
         if results['ids'] and len(results['ids']) > 0:
@@ -127,7 +130,38 @@ class RAGService:
                     "content": results['documents'][0][i]
                 })
         
-        return formatted_results
+        # Deduplicate: max 2 chunks per document for diversity
+        deduped = self.deduplicate_results(formatted_results, max_per_doc=2)
+        
+        # Return top_k after dedup
+        return deduped[:top_k]
+
+    @staticmethod
+    def deduplicate_results(results: list[dict], max_per_doc: int = 2) -> list[dict]:
+        """Limit chunks per document to ensure result diversity.
+        
+        Args:
+            results: List of search results, assumed sorted by score (ascending).
+            max_per_doc: Maximum number of chunks to keep per unique doc_id.
+            
+        Returns:
+            Filtered list maintaining original order.
+        """
+        if not results:
+            return []
+            
+        doc_counts: dict[str, int] = {}
+        deduped = []
+        
+        for result in results:
+            doc_id = result.get("metadata", {}).get("doc_id", result["id"])
+            current_count = doc_counts.get(doc_id, 0)
+            
+            if current_count < max_per_doc:
+                deduped.append(result)
+                doc_counts[doc_id] = current_count + 1
+        
+        return deduped
 
     async def delete_document(self, doc_type: str, doc_id: str):
         """
