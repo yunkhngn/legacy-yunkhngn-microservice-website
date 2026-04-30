@@ -2,9 +2,12 @@ import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { FirebaseAuthGuard } from '../../common/guards';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 @ApiTags('AI')
 @Controller('ai')
+@UseGuards(FirebaseAuthGuard, ThrottlerGuard)
+@Throttle({ default: { limit: 20, ttl: 60000 } })
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
