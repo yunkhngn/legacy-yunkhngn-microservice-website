@@ -36,7 +36,7 @@ async function bootstrap() {
     logger.log('Syncing Blogs...');
     const blogs = await blogService.findAll();
     for (const blog of blogs) {
-      if (blog.status === 'published') {
+      if (blog.status === 'PUBLISHED') {
         const fullContent = `${blog.title}\n\n${blog.contentJSON || ''}`;
         await aiService.syncDocument('blog', blog.id.toString(), fullContent, {
           title: blog.title,
