@@ -22,7 +22,9 @@ export class MonitorGateway implements OnGatewayDisconnect {
   private agentUrl: string;
 
   constructor(private configService: ConfigService) {
-    const httpUrl = this.configService.get<string>('MONITOR_AGENT_URL') || 'http://monitor-agent:9100';
+    const httpUrl =
+      this.configService.get<string>('MONITOR_AGENT_URL') ||
+      'http://monitor-agent:9100';
     this.agentUrl = httpUrl.replace(/^http/, 'ws');
   }
 
@@ -57,10 +59,16 @@ export class MonitorGateway implements OnGatewayDisconnect {
     this.cleanupClient(client.id, 'stats');
   }
 
-  private setupAgentConnection(client: Socket, containerId: string, type: 'logs' | 'stats') {
+  private setupAgentConnection(
+    client: Socket,
+    containerId: string,
+    type: 'logs' | 'stats',
+  ) {
     if (!containerId) return;
 
-    this.logger.log(`Client ${client.id} subscribing to ${type} for ${containerId}`);
+    this.logger.log(
+      `Client ${client.id} subscribing to ${type} for ${containerId}`,
+    );
     this.cleanupClient(client.id, type);
 
     try {
@@ -70,7 +78,10 @@ export class MonitorGateway implements OnGatewayDisconnect {
       ws.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data.toString());
-          client.emit(type === 'logs' ? 'monitor:log' : 'monitor:stats', parsed);
+          client.emit(
+            type === 'logs' ? 'monitor:log' : 'monitor:stats',
+            parsed,
+          );
         } catch {
           // Ignore JSON parse errors
         }
@@ -78,7 +89,9 @@ export class MonitorGateway implements OnGatewayDisconnect {
 
       ws.onerror = (err) => {
         this.logger.error(`Agent WS error (${type}) for ${containerId}:`, err);
-        client.emit('monitor:error', { message: `Agent WebSocket error (${type})` });
+        client.emit('monitor:error', {
+          message: `Agent WebSocket error (${type})`,
+        });
       };
 
       ws.onclose = () => {
@@ -86,7 +99,8 @@ export class MonitorGateway implements OnGatewayDisconnect {
         const clientConns = this.connections.get(client.id);
         if (clientConns) {
           delete clientConns[type];
-          if (!clientConns.logs && !clientConns.stats) this.connections.delete(client.id);
+          if (!clientConns.logs && !clientConns.stats)
+            this.connections.delete(client.id);
         }
       };
 
@@ -94,7 +108,10 @@ export class MonitorGateway implements OnGatewayDisconnect {
       clientConns[type] = ws;
       this.connections.set(client.id, clientConns);
     } catch (error) {
-      this.logger.error(`Failed to create agent WS (${type}) connection`, error);
+      this.logger.error(
+        `Failed to create agent WS (${type}) connection`,
+        error,
+      );
     }
   }
 
@@ -104,16 +121,22 @@ export class MonitorGateway implements OnGatewayDisconnect {
 
     if (type) {
       if (conns[type]) {
-        try { conns[type].close(); } catch {
+        try {
+          conns[type].close();
+        } catch {
           // Ignore close errors
         }
         delete conns[type];
       }
     } else {
-      try { conns.logs?.close(); } catch {
+      try {
+        conns.logs?.close();
+      } catch {
         // Ignore close errors
       }
-      try { conns.stats?.close(); } catch {
+      try {
+        conns.stats?.close();
+      } catch {
         // Ignore close errors
       }
       this.connections.delete(clientId);

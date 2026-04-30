@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 import { ChatLogsService } from '../chat-logs/chat-logs.service';
@@ -13,7 +19,9 @@ export class ChatService {
     private settingsService: SettingsService,
     private chatLogsService: ChatLogsService,
   ) {
-    this.aiServiceUrl = this.configService.get<string>('LETTER_AI_URL') || 'http://ai-service:8000';
+    this.aiServiceUrl =
+      this.configService.get<string>('LETTER_AI_URL') ||
+      'http://ai-service:8000';
   }
 
   private async callAiService(endpoint: string, body: any) {
@@ -45,7 +53,10 @@ export class ChatService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Error calling AI microservice:', error);
-      throw new HttpException('Failed to connect to AI Service', HttpStatus.SERVICE_UNAVAILABLE);
+      throw new HttpException(
+        'Failed to connect to AI Service',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 
@@ -90,7 +101,7 @@ export class ChatService {
 
     // 2. Proxy to Python AI Service
     const startTime = Date.now();
-    
+
     // Get AI Persona from settings
     const personaRaw = settingsMap['ai_persona'];
     let persona = null;
@@ -104,19 +115,21 @@ export class ChatService {
 
     const result = await this.callAiService('/chat/public', {
       message: userMessage,
-      history: history.map(h => ({ role: h.role, content: h.content })),
+      history: history.map((h) => ({ role: h.role, content: h.content })),
       language,
       persona,
     });
 
     // 3. Log the interaction (fire-and-forget)
-    this.chatLogsService.log({
-      userMessage,
-      aiResponse: result.text,
-      imageUrl: result.imageUrl,
-      language,
-      responseTime: Date.now() - startTime,
-    }).catch(err => this.logger.error(`Failed to log chat: ${err.message}`));
+    this.chatLogsService
+      .log({
+        userMessage,
+        aiResponse: result.text,
+        imageUrl: result.imageUrl,
+        language,
+        responseTime: Date.now() - startTime,
+      })
+      .catch((err) => this.logger.error(`Failed to log chat: ${err.message}`));
 
     return result;
   }

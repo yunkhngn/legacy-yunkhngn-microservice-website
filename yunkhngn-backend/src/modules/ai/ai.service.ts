@@ -1,4 +1,11 @@
-import { Injectable, HttpException, HttpStatus, Logger, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.service';
 
@@ -21,10 +28,16 @@ export class AiService {
     @Inject(forwardRef(() => SettingsService))
     private settingsService: SettingsService,
   ) {
-    this.aiServiceUrl = this.configService.get<string>('LETTER_AI_URL') || 'http://ai-service:8000';
+    this.aiServiceUrl =
+      this.configService.get<string>('LETTER_AI_URL') ||
+      'http://ai-service:8000';
   }
 
-  private async callAiService(endpoint: string, body: any, base: string = '/gemini') {
+  private async callAiService(
+    endpoint: string,
+    body: any,
+    base: string = '/gemini',
+  ) {
     try {
       // Get API key from database (encrypted)
       let apiKey = await this.settingsService.getRandomApiKey();
@@ -32,14 +45,17 @@ export class AiService {
         apiKey = this.configService.get<string>('GEMINI_API_KEY');
       }
 
-      const response = await fetch(`${this.aiServiceUrl}/api/v1${base}${endpoint}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-gemini-api-key': apiKey || '',
+      const response = await fetch(
+        `${this.aiServiceUrl}/api/v1${base}${endpoint}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-api-key': apiKey || '',
+          },
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -52,8 +68,14 @@ export class AiService {
       return await response.json();
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      this.logger.error(`Error calling AI microservice: ${error.message}`, error.stack);
-      throw new HttpException('Failed to connect to AI Service', HttpStatus.SERVICE_UNAVAILABLE);
+      this.logger.error(
+        `Error calling AI microservice: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        'Failed to connect to AI Service',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 
@@ -66,7 +88,10 @@ export class AiService {
     repoUrl: string,
     language: string = 'vi',
   ): Promise<ProjectInfo> {
-    return await this.callAiService('/project-info', { readme_content: repoUrl, language });
+    return await this.callAiService('/project-info', {
+      readme_content: repoUrl,
+      language,
+    });
   }
 
   async generateBlogContent(
@@ -95,20 +120,32 @@ export class AiService {
     return data.summary;
   }
 
-  async syncDocument(type: string, id: string, content: string, metadata: any = {}, action: 'upsert' | 'delete' = 'upsert') {
+  async syncDocument(
+    type: string,
+    id: string,
+    content: string,
+    metadata: any = {},
+    action: 'upsert' | 'delete' = 'upsert',
+  ) {
     try {
-      await this.callAiService('/sync', {
-        type,
-        action,
-        document: {
-          id,
+      await this.callAiService(
+        '/sync',
+        {
           type,
-          content,
-          metadata,
+          action,
+          document: {
+            id,
+            type,
+            content,
+            metadata,
+          },
         },
-      }, '/rag');
+        '/rag',
+      );
     } catch (error) {
-      this.logger.error(`Failed to sync ${type} ${id} to AI Service: ${error.message}`);
+      this.logger.error(
+        `Failed to sync ${type} ${id} to AI Service: ${error.message}`,
+      );
       // We don't throw here to avoid breaking the main flow (e.g. blog save)
     }
   }
@@ -120,7 +157,7 @@ export class AiService {
   ) {
     return await this.callAiService('/chat', {
       message,
-      history: history.map(h => ({ role: h.role, content: h.content })),
+      history: history.map((h) => ({ role: h.role, content: h.content })),
       language,
       context_data: {},
     });
