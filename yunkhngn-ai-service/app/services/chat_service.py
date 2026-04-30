@@ -39,6 +39,11 @@ class ChatService:
         instructions = persona.get("instructions_for_ai", {})
         facts = persona.get("knowledge_and_facts", [])
         
+        # Collect unhandled keys to ensure no data is lost
+        handled_keys = {"identity", "voice_and_tone", "instructions_for_ai", "knowledge_and_facts", "sample_dialogues"}
+        other_info = {k: v for k, v in persona.items() if k not in handled_keys}
+        other_info_json = json.dumps(other_info, indent=2, ensure_ascii=False) if other_info else "None"
+        
         # Format context
         context_text = "\n".join([f"- {c['content']}" for c in context_chunks]) if context_chunks else "No specific context found."
         
@@ -54,6 +59,9 @@ VOICE AND TONE:
 FACTS & KNOWLEDGE:
 {chr(10).join([f"- {f}" for f in facts])}
 
+ADDITIONAL PERSONAL DETAILS (JSON):
+{other_info_json}
+
 INSTRUCTIONS:
 - Recruitment/Hiring: {instructions.get('recruitment_or_hiring', '')}
 - Unknown info: {instructions.get('unknown_information', '')}
@@ -65,7 +73,7 @@ RETRIEVED CONTEXT FROM YOUR WEBSITE:
 FINAL RULES:
 1. Always respond in {lang_text}.
 2. Use the retrieved context to answer accurately, but ONLY if it is relevant to the user's question.
-3. If the retrieved context is not relevant to the question, ignore it and answer based on your general persona knowledge.
+3. If the retrieved context is not relevant to the question, ignore it and answer based on your general persona knowledge (including IDENTITY, FACTS, and ADDITIONAL DETAILS).
 4. If you don't know, refer to the 'Unknown info' instruction.
 5. Keep it concise, friendly, and professional as per your persona.
 6. Format links as Markdown if available in context.
