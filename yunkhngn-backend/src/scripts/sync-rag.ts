@@ -4,6 +4,7 @@ import { BlogService } from '../modules/blog/blog.service';
 import { ProjectService } from '../modules/project/project.service';
 import { SettingsService } from '../modules/settings/settings.service';
 import { AiService } from '../modules/ai/ai.service';
+import { KnowledgeService } from '../modules/knowledge/knowledge.service';
 import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
@@ -60,6 +61,12 @@ async function bootstrap() {
       logger.log(`Synced project: ${project.title}`);
       await delay(2000); // 2 second delay
     }
+
+    // 4. Sync Knowledge Entries
+    logger.log('Syncing Knowledge Entries...');
+    const knowledgeService = app.get(KnowledgeService);
+    const knowledgeResult = await knowledgeService.syncAll();
+    logger.log(`Synced ${knowledgeResult.synced} knowledge entries (${knowledgeResult.failed} failed)`);
 
     logger.log('RAG Synchronization completed successfully!');
   } catch (error) {

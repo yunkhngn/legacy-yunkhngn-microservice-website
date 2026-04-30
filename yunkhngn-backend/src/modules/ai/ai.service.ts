@@ -125,4 +125,14 @@ export class AiService {
       context_data: {},
     });
   }
+
+  async getRagStats(): Promise<any> {
+    try {
+      const response = await fetch(`${this.aiServiceUrl}/api/v1/rag/stats`);
+      if (!response.ok) return { count: 0 };
+      return await response.json();
+    } catch {
+      return { count: 0 };
+    }
+  }
 }
