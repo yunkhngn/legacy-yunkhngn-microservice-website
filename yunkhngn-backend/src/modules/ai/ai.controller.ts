@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { FirebaseAuthGuard } from '../../common/guards';
@@ -109,5 +109,13 @@ export class AiController {
       data.history || [],
       data.language,
     );
+  }
+
+  @Get('rag/stats')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get RAG vector database statistics' })
+  @UseGuards(FirebaseAuthGuard)
+  async getRagStats() {
+    return this.aiService.getRagStats();
   }
 }
