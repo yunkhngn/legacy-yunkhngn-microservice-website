@@ -26,9 +26,14 @@ async def sync_document(
             )
             return {"status": "success", "message": f"Document {request.document.id} synced"}
         elif request.action == "delete":
-            # ChromaDB doesn't have a simple delete by prefix in this abstraction yet
-            # but we can implement it in rag_service if needed
-            return {"status": "error", "message": "Delete not implemented yet"}
+            success = await rag_service.delete_document(
+                doc_type=request.document.type,
+                doc_id=request.document.id
+            )
+            if success:
+                return {"status": "success", "message": f"Document {request.document.id} deleted"}
+            else:
+                return {"status": "error", "message": "Failed to delete document"}
     except Exception as e:
         logger.error(f"Error in RAG sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))

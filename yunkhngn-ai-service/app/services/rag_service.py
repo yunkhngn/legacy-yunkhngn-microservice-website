@@ -59,6 +59,9 @@ class RAGService:
         if metadata is None:
             metadata = {}
         
+        # Clean up old chunks first to avoid ghost data if the new version is shorter
+        await self.delete_document(doc_type, doc_id)
+        
         chunks = self.chunk_text(text)
         
         for i, chunk in enumerate(chunks):
@@ -109,5 +112,25 @@ class RAGService:
                 })
         
         return formatted_results
+
+    async def delete_document(self, doc_type: str, doc_id: str):
+        """
+        Delete all chunks belonging to a specific document.
+        """
+        try:
+            # Delete by metadata filter
+            self.collection.delete(
+                where={
+                    "$and": [
+                        {"doc_type": doc_type},
+                        {"doc_id": str(doc_id)}
+                    ]
+                }
+            )
+            logger.info(f"Deleted {doc_type} {doc_id} from RAG collection")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting document from RAG: {e}")
+            return False
 
 rag_service = RAGService()
