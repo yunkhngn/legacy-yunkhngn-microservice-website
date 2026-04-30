@@ -1,20 +1,17 @@
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException
 from typing import Optional
 import logging
 
 from app.schemas.chat import PublicChatRequest
 from app.services.chat_service import chat_service
 from app.services.image_service import image_service
-from app.infrastructure.limiter import limiter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/chat/public")
-@limiter.limit("10/minute")
 async def public_chat(
     request: PublicChatRequest,
-    fastapi_request: Request,
     x_gemini_api_key: Optional[str] = Header(None)
 ):
     try:
