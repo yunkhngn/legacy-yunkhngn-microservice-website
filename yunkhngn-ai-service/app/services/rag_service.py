@@ -3,6 +3,7 @@ import chromadb
 from google import genai
 from app.config import get_settings
 import os
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ class RAGService:
         )
         self.collection = self.chroma_client.get_or_create_collection(name="website_content")
         self.embedding_model = "gemini-embedding-2"
+        
+        from app.processors.content_processor import ContentProcessor
+        self.content_processor = ContentProcessor()
 
     def chunk_text(self, text: str, max_chars: int = 2000, overlap: int = 200) -> list[str]:
         """
@@ -62,7 +66,11 @@ class RAGService:
         # Clean up old chunks first to avoid ghost data if the new version is shorter
         await self.delete_document(doc_type, doc_id)
         
-        chunks = self.chunk_text(text)
+        # Prepare content for embedding: flatten JSON to natural language
+        title = metadata.get("title", "")
+        embedding_text = self.content_processor.prepare_for_embedding(title, text) if title else text
+        
+        chunks = self.chunk_text(embedding_text)
         
         for i, chunk in enumerate(chunks):
             chunk_id = f"{doc_type}_{doc_id}_{i}"
