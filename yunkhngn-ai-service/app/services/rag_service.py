@@ -93,7 +93,7 @@ class RAGService:
             )
         logger.info(f"Indexed {len(chunks)} chunks for {doc_type} {doc_id}")
 
-    async def search(self, query: str, top_k: int = 5, api_key: str | None = None) -> list[dict]:
+    async def search(self, query: str, top_k: int = 3, api_key: str | None = None) -> list[dict]:
         query_embedding = await self.get_embedding(query, api_key)
         
         results = self.collection.query(
@@ -101,12 +101,20 @@ class RAGService:
             n_results=top_k
         )
         
+        # Distance threshold (smaller is better for L2)
+        # 1.0 - 1.2 is a reasonable threshold for Gemini embeddings
+        THRESHOLD = 1.1 
+        
         formatted_results = []
         if results['ids'] and len(results['ids']) > 0:
             for i in range(len(results['ids'][0])):
+                distance = results['distances'][0][i] if 'distances' in results else 0
+                if distance > THRESHOLD:
+                    continue
+                    
                 formatted_results.append({
                     "id": results['ids'][0][i],
-                    "score": results['distances'][0][i] if 'distances' in results else None,
+                    "score": distance,
                     "metadata": results['metadatas'][0][i],
                     "content": results['documents'][0][i]
                 })

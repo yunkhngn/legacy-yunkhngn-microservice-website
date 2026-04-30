@@ -64,10 +64,11 @@ RETRIEVED CONTEXT FROM YOUR WEBSITE:
 
 FINAL RULES:
 1. Always respond in {lang_text}.
-2. Use the retrieved context to answer accurately.
-3. If you don't know, refer to the 'Unknown info' instruction.
-4. Keep it concise, friendly, and professional as per your persona.
-5. Format links as Markdown if available in context.
+2. Use the retrieved context to answer accurately, but ONLY if it is relevant to the user's question.
+3. If the retrieved context is not relevant to the question, ignore it and answer based on your general persona knowledge.
+4. If you don't know, refer to the 'Unknown info' instruction.
+5. Keep it concise, friendly, and professional as per your persona.
+6. Format links as Markdown if available in context.
 """
         return instruction
 
