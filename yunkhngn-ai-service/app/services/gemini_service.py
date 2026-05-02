@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional, Any
 from google import genai
 from app.config import get_settings
 
