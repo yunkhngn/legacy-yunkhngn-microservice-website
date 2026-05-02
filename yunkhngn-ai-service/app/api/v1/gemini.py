@@ -7,7 +7,7 @@ from app.schemas.gemini import (
     GenerateTextRequest, ProjectInfoRequest, BlogContentRequest,
     DashboardSummaryRequest, ChatRequest,
 )
-from app.services import gemini_service
+from app.services import gemini_service, github_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Gemini AI"])
@@ -30,14 +30,22 @@ async def generate_project_info(
     x_gemini_api_key: Optional[str] = Header(None)
 ):
     try:
-        # Fetch README from GitHub if a URL is passed
         readme = req.readme_content
+        repo_structure = None
+        
         if readme.startswith("http"):
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(readme, headers={"Accept": "application/vnd.github.raw"})
-                resp.raise_for_status()
-                readme = resp.text
-        return await gemini_service.generate_project_info(readme, req.language, x_gemini_api_key)
+            # Use the new GitHub service to fetch README and structure
+            readme, repo_structure = await github_service.get_github_data(readme)
+            if not readme:
+                # If readme is still empty, it might be a private repo or invalid URL
+                # We can either raise an error or proceed with whatever we got
+                raise HTTPException(status_code=400, detail="Could not fetch content from the provided URL")
+        
+        return await gemini_service.generate_project_info(
+            readme, repo_structure, req.language, x_gemini_api_key
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"generate_project_info failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

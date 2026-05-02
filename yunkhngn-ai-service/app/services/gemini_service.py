@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional, Any
 from google import genai
 from app.config import get_settings
 
@@ -21,9 +22,19 @@ async def generate_text(prompt: str, api_key: str | None = None) -> str:
     )
     return response.text
 
-async def generate_project_info(readme_content: str, language: str = "vi", api_key: str | None = None) -> dict:
+async def generate_project_info(
+    readme_content: str, 
+    repo_structure: Optional[str] = None,
+    language: str = "vi", 
+    api_key: str | None = None
+) -> dict:
     lang = "Vietnamese" if language == "vi" else "English"
-    prompt = f"""Analyze the following README content and extract/generate the following information in JSON format.
+    
+    context = f"README Content:\n{readme_content[:10000]}"
+    if repo_structure:
+        context += f"\n\nRepository Structure:\n{repo_structure}"
+
+    prompt = f"""Analyze the following repository information and extract/generate the project details in JSON format.
 Please write the content in {lang}.
 
 {{
@@ -35,8 +46,8 @@ Please write the content in {lang}.
   "demoLink": "URL if found, otherwise null"
 }}
 
-README Content:
-{readme_content[:10000]}"""
+Repository Context:
+{context}"""
     
     client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
