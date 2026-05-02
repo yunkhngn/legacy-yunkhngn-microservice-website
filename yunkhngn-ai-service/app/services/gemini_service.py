@@ -37,10 +37,19 @@ async def generate_project_info(
     prompt = f"""Analyze the following repository information and extract/generate the project details in JSON format.
 Please write the content in {lang}.
 
+The "content" field should be a detailed project case study in clean HTML (TipTap-compatible) with the following sections (use only <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>):
+1. Project Overview: A professional and engaging introduction.
+2. Core Technologies and Rationale: Explain which technologies were used and WHY they were chosen.
+3. Key Features: A bulleted list of main functionalities.
+4. Technical Challenges: Describe 2-3 specific technical hurdles and how they were overcome.
+5. What I Learned: Key takeaways and skills gained.
+6. Complexity Label: One of [Beginner, Intermediate, Advanced] with a brief justification.
+
+Return only a valid JSON object:
 {{
   "title": "Project Title",
-  "description": "A short, engaging description (max 200 chars)",
-  "content": "Generate a full project introduction in clean HTML (TipTap-compatible) using only <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em> (no <h1>).",
+  "description": "A short, engaging summary (max 200 chars)",
+  "content": "Full HTML content here...",
   "techStack": ["Tech 1", "Tech 2 (Max 5)"],
   "tags": ["Tag 1 (Max 1)"],
   "demoLink": "URL if found, otherwise null"
