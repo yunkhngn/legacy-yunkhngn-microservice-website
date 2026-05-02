@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""
     gemini_api_key: str = ""
+    github_token: str = ""
 
     log_level: str = "INFO"
 
