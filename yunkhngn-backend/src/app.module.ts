@@ -24,6 +24,10 @@ import { PrismaModule } from './database/prisma/prisma.module';
 // Domain Modules
 import { BlogModule } from './modules/blog/blog.module';
 import { ProjectModule } from './modules/project/project.module';
+import { GalleryModule } from './modules/gallery/gallery.module';
+import { AlbumModule } from './modules/album/album.module';
+import { MediaModule } from './modules/media/media.module';
+import { PhotoReactionsModule } from './modules/photo-reactions/photo-reactions.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UserModule } from './modules/user/user.module';
@@ -40,6 +44,7 @@ import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 
 // Integration Modules
+import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
 import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.module';
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
@@ -71,6 +76,11 @@ import { HealthController } from './modules/health/health.controller';
       inject: [ConfigService],
     }),
     AuthModule,
+    CloudinaryModule,
+    GalleryModule,
+    AlbumModule,
+    MediaModule,
+    PhotoReactionsModule,
     PrismaModule,
     BlogModule,
     ProjectModule,
