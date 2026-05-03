@@ -24,19 +24,15 @@ import { PrismaModule } from './database/prisma/prisma.module';
 // Domain Modules
 import { BlogModule } from './modules/blog/blog.module';
 import { ProjectModule } from './modules/project/project.module';
-import { GalleryModule } from './modules/gallery/gallery.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UserModule } from './modules/user/user.module';
 import { AiModule } from './modules/ai/ai.module';
-import { PhotoReactionsModule } from './modules/photo-reactions/photo-reactions.module';
 import { ContactModule } from './modules/contact/contact.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { MediaModule } from './modules/media/media.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { SystemModule } from './modules/system/system.module';
 import { ShortlinkModule } from './modules/shortlink/shortlink.module';
-import { AlbumModule } from './modules/album/album.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { LetterModule } from './modules/letter/letter.module';
 import { MonitorModule } from './modules/monitor/monitor.module';
@@ -44,7 +40,6 @@ import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 
 // Integration Modules
-import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
 import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.module';
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
@@ -76,26 +71,21 @@ import { HealthController } from './modules/health/health.controller';
       inject: [ConfigService],
     }),
     AuthModule,
-    CloudinaryModule,
     PrismaModule,
     BlogModule,
     ProjectModule,
-    GalleryModule,
     CommentsModule,
     SettingsModule,
     UserModule,
     AiModule,
-    PhotoReactionsModule,
     ContactModule,
     NotificationsModule,
     CloudflareModule,
     GithubModule,
-    MediaModule,
     ChatModule,
     SystemModule,
     NewsletterModule,
     ShortlinkModule,
-    AlbumModule,
     JournalModule,
     LastFmModule,
     LetterModule,

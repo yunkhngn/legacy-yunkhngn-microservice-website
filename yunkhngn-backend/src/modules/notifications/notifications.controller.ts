@@ -6,6 +6,10 @@ import {
   Param,
   Query,
   UseGuards,
+  Post,
+  Body,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,13 +23,21 @@ import { Roles } from '../../common/decorators';
 
 @ApiTags('Notifications')
 @Controller('notifications')
-@UseGuards(FirebaseAuthGuard, RolesGuard)
-@Roles('ADMIN')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
+
+  @Post('internal')
+  @ApiOperation({ summary: 'Internal endpoint for service-to-service notifications' })
+  async createInternal(
+    @Body() body: { type: string; message: string; link?: string },
+  ) {
+    return this.notificationsService.create(body.type, body.message, body.link);
+  }
 
   @Get()
   @ApiBearerAuth()
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Get paginated notifications (Admin only)' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
