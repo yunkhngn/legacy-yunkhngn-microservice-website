@@ -4,9 +4,10 @@ import { JournalService } from './journal.service';
 import { IJournalRepository } from './domain/journal.repository.interface';
 import { PrismaJournalRepository } from './infrastructure/journal.repository';
 import { PrismaModule } from '../../database/prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule],
   controllers: [JournalController],
   providers: [
     JournalService,
@@ -17,4 +18,4 @@ import { PrismaModule } from '../../database/prisma/prisma.module';
   ],
   exports: [JournalService],
 })
-export class JournalModule {}
+export class JournalModule { }
