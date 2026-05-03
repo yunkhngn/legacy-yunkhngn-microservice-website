@@ -8,6 +8,7 @@ import * as fs from 'fs';
 
 dotenv.config();
 
+// Trigger fresh build after revert
 async function bootstrap() {
   // Initialize Firebase Admin
   if (admin.apps.length === 0) {
