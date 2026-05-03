@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { IJournalRepository } from './domain/journal.repository.interface';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class JournalService {
@@ -10,7 +11,8 @@ export class JournalService {
   constructor(
     @Inject(IJournalRepository)
     private readonly journalRepository: IJournalRepository,
-  ) {}
+    private readonly notificationsService: NotificationsService,
+  ) { }
 
   async create(createJournalDto: CreateJournalDto) {
     const { tags, ...rest } = createJournalDto;
@@ -88,11 +90,35 @@ export class JournalService {
       } else {
         // Update reaction
         await this.journalRepository.updateReaction(existing.id, type);
+
+        // Send notification
+        this.notificationsService
+          .create(
+            'LIKE',
+            `New ${type} reaction on journal entry`,
+            `/journal#journal-${journalId}`,
+          )
+          .catch((err) =>
+            this.logger.error('Failed to send real-time notification', err),
+          );
+
         return { action: 'updated', type };
       }
     } else {
       // Create reaction
       await this.journalRepository.createReaction({ journalId, uid, type });
+
+      // Send notification
+      this.notificationsService
+        .create(
+          'LIKE',
+          `New ${type} reaction on journal entry`,
+          `/journal#journal-${journalId}`,
+        )
+        .catch((err) =>
+          this.logger.error('Failed to send real-time notification', err),
+        );
+
       return { action: 'created', type };
     }
   }
