@@ -23,3 +23,11 @@ class ChatRequest(BaseModel):
     history: List[Any] = []
     context_data: dict = {}
     language: str = "vi"
+
+class TarotCard(BaseModel):
+    name: str
+    description: str
+
+class TarotReadingRequest(BaseModel):
+    question: str
+    cards: List[TarotCard]
