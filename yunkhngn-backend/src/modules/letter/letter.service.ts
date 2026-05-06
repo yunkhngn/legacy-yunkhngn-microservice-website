@@ -12,6 +12,7 @@ import { UpdateLetterDto } from './dto/update-letter.dto';
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { Letter } from './domain/letter.entity';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 
 @Injectable()
 export class LetterService {
@@ -20,6 +21,7 @@ export class LetterService {
   constructor(
     @Inject(ILetterRepository)
     private readonly letterRepository: ILetterRepository,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   private stripSensitive(letter: Letter) {
@@ -203,8 +205,22 @@ export class LetterService {
 
     let shouldReprocess = false;
 
+    let imagesToDelete: string[] = [];
+
     // If pages change, process if animation is enabled
     if (dto.pages) {
+      // Find old pages to diff
+      const oldPages = existing.pages || [];
+      const newUrls = dto.pages.map((p) => p.imageUrl);
+
+      imagesToDelete = oldPages
+        .filter((op) => !newUrls.includes(op.imageUrl))
+        .reduce((acc, curr) => {
+          if (curr.imageUrl) acc.push(curr.imageUrl);
+          if (curr.revealMapUrl) acc.push(curr.revealMapUrl);
+          return acc;
+        }, [] as string[]);
+
       await this.letterRepository.clearPages(id);
       data.pages = {
         create: dto.pages.map((p, i) => ({
@@ -233,9 +249,13 @@ export class LetterService {
     const letter = await this.letterRepository.update(id, data);
 
     if (shouldReprocess && letter.pages) {
-      this.triggerProcessing(letter.id, letter.pages).catch((err) =>
+      void this.triggerProcessing(letter.id, letter.pages).catch((err) =>
         this.logger.error('Letter processing trigger failed', err.stack),
       );
+    }
+
+    if (imagesToDelete.length > 0) {
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return this.stripSensitive(letter);
@@ -245,12 +265,45 @@ export class LetterService {
     const existing = await this.letterRepository.findById(id);
     if (!existing) throw new NotFoundException('Letter not found');
     this.logger.log(`Removing letter ID: ${id}`);
-    return this.letterRepository.delete(id);
+
+    const imagesToDelete = (existing.pages || []).reduce((acc, curr) => {
+      if (curr.imageUrl) acc.push(curr.imageUrl);
+      if (curr.revealMapUrl) acc.push(curr.revealMapUrl);
+      return acc;
+    }, [] as string[]);
+
+    const deleted = await this.letterRepository.delete(id);
+
+    if (imagesToDelete.length > 0) {
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    }
+
+    return deleted;
   }
 
   async bulkDelete(ids: string[]) {
     this.logger.log(`Bulk deleting ${ids.length} letters`);
+
+    // Fetch all before delete to get image URLs
+    const letters = await Promise.all(
+      ids.map((id) => this.letterRepository.findById(id)),
+    );
+    const imagesToDelete: string[] = [];
+    letters.forEach((l) => {
+      if (l && l.pages) {
+        l.pages.forEach((p) => {
+          if (p.imageUrl) imagesToDelete.push(p.imageUrl);
+          if (p.revealMapUrl) imagesToDelete.push(p.revealMapUrl);
+        });
+      }
+    });
+
     const count = await this.letterRepository.deleteMany(ids);
+
+    if (imagesToDelete.length > 0) {
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    }
+
     return { deleted: count };
   }
 

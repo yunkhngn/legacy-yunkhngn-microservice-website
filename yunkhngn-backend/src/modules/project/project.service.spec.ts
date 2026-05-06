@@ -3,6 +3,7 @@ import { ProjectService } from './project.service';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { AiService } from '../ai/ai.service';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 
 const mockProjectRepository = {
   create: jest.fn(),
@@ -17,6 +18,10 @@ const mockAiService = {
   syncDocument: jest.fn(),
 };
 
+const mockCloudinaryService = {
+  deleteImagesSafely: jest.fn(),
+};
+
 describe('ProjectService', () => {
   let service: ProjectService;
 
@@ -26,6 +31,7 @@ describe('ProjectService', () => {
         ProjectService,
         { provide: IProjectRepository, useValue: mockProjectRepository },
         { provide: AiService, useValue: mockAiService },
+        { provide: CloudinaryService, useValue: mockCloudinaryService },
       ],
     }).compile();
 

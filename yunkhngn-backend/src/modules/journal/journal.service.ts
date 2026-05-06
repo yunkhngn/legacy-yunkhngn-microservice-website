@@ -3,6 +3,7 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { IJournalRepository } from './domain/journal.repository.interface';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 
 @Injectable()
 export class JournalService {
@@ -12,7 +13,8 @@ export class JournalService {
     @Inject(IJournalRepository)
     private readonly journalRepository: IJournalRepository,
     private readonly notificationsService: NotificationsService,
-  ) { }
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   async create(createJournalDto: CreateJournalDto) {
     const { tags, ...rest } = createJournalDto;
@@ -55,19 +57,40 @@ export class JournalService {
     const { tags, ...rest } = updateJournalDto;
 
     const data: any = { ...rest };
+    const currentEntry = await this.journalRepository.findById(id);
+    if (!currentEntry) throw new NotFoundException('Journal entry not found');
+
     if (tags !== undefined) {
       data.tags = tags ? JSON.stringify(tags) : null;
     }
+
+    const imagesToDelete: string[] = [];
     if (rest.images !== undefined) {
       data.images = rest.images ? JSON.stringify(rest.images) : null;
+
+      const oldImages = currentEntry.images
+        ? JSON.parse(currentEntry.images)
+        : [];
+      const newImages = rest.images || [];
+      imagesToDelete.push(
+        ...oldImages.filter((img: string) => !newImages.includes(img)),
+      );
     }
 
     this.logger.log(`Updating journal entry ID: ${id}`);
     const entry = await this.journalRepository.update(id, data);
+
+    if (imagesToDelete.length > 0) {
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    }
+
     return this.formatEntry(entry);
   }
 
   async remove(id: string) {
+    const currentEntry = await this.journalRepository.findById(id);
+    if (!currentEntry) return null;
+
     this.logger.log(`Removing journal entry ID: ${id} and its children`);
 
     // Recursive delete children
@@ -76,7 +99,16 @@ export class JournalService {
       await this.remove(child.id);
     }
 
-    return this.journalRepository.delete(id);
+    const deleted = await this.journalRepository.delete(id);
+    if (deleted && deleted.images) {
+      try {
+        const images = JSON.parse(deleted.images);
+        void this.cloudinaryService.deleteImagesSafely(images);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return deleted;
   }
 
   async toggleReaction(journalId: string, uid: string, type: string) {
@@ -98,9 +130,7 @@ export class JournalService {
             `New ${type} reaction on journal entry`,
             `/journal#journal-${journalId}`,
           )
-          .catch((err) =>
-            this.logger.error('Failed to send real-time notification', err),
-          );
+          .catch(() => {});
 
         return { action: 'updated', type };
       }

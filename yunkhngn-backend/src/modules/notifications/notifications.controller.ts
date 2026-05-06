@@ -9,7 +9,6 @@ import {
   Post,
   Body,
   Headers,
-  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,10 +23,12 @@ import { Roles } from '../../common/decorators';
 @ApiTags('Notifications')
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) { }
+  constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post('internal')
-  @ApiOperation({ summary: 'Internal endpoint for service-to-service notifications' })
+  @ApiOperation({
+    summary: 'Internal endpoint for service-to-service notifications',
+  })
   async createInternal(
     @Body() body: { type: string; message: string; link?: string },
   ) {
