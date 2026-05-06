@@ -10,5 +10,6 @@ export class Project {
   repoLink?: string;
   githubLink?: string;
   tags?: string;
+  seoImage?: string;
   createdAt: Date;
 }

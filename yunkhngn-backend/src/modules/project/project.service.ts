@@ -4,6 +4,8 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { Project } from './domain/project.entity';
 import { AiService } from '../ai/ai.service';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
+import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 
 @Injectable()
 export class ProjectService {
@@ -13,6 +15,7 @@ export class ProjectService {
     @Inject(IProjectRepository)
     private readonly projectRepository: IProjectRepository,
     private readonly aiService: AiService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
@@ -89,8 +92,28 @@ export class ProjectService {
       }
     }
 
+    const currentProject = await this.projectRepository.findById(id);
+    if (!currentProject) throw new ConflictException('Project not found');
+
     const data = this.mapDtoToEntityData(updateProjectDto);
     this.logger.log(`Updating project ID: ${id}`);
+
+    // --- NEW: Collect old images to delete ---
+    const imagesToDelete: string[] = [];
+    if (data.cover !== undefined && data.cover !== currentProject.cover) {
+      if (currentProject.cover) imagesToDelete.push(currentProject.cover);
+    }
+    if (
+      data.seoImage !== undefined &&
+      data.seoImage !== currentProject.seoImage
+    ) {
+      if (currentProject.seoImage) imagesToDelete.push(currentProject.seoImage);
+    }
+    if (data.contentJSON !== undefined) {
+      const oldImages = extractImagesFromJsonContent(currentProject.contentJSON);
+      const newImages = extractImagesFromJsonContent(data.contentJSON);
+      imagesToDelete.push(...oldImages.filter((img) => !newImages.includes(img)));
+    }
     const project = await this.projectRepository.update(id, data);
 
     // Sync to RAG
@@ -105,6 +128,10 @@ export class ProjectService {
       },
     );
 
+    if (imagesToDelete.length > 0) {
+      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    }
+
     return project;
   }
 
@@ -113,6 +140,14 @@ export class ProjectService {
     const project = await this.projectRepository.delete(id);
     if (project) {
       await this.aiService.syncDocument('project', id, '', {}, 'delete');
+
+      // Cleanup all associated Cloudinary images
+      const imagesToDelete = [
+        project.cover,
+        project.seoImage,
+        ...extractImagesFromJsonContent(project.contentJSON),
+      ];
+      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
     return project;
   }
