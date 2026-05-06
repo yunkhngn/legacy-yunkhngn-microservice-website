@@ -91,7 +91,14 @@ export class GalleryService {
 
   async remove(id: string): Promise<Gallery> {
     this.logger.log(`Removing photo ID: ${id}`);
-    return this.galleryRepository.delete(id);
+    const photo = await this.galleryRepository.delete(id);
+
+    if (photo && photo.imageUrl) {
+      // Note: Gallery entity has thumbnailUrl but Prisma schema does not — only delete imageUrl
+      this.cloudinaryService.deleteImagesSafely([photo.imageUrl]);
+    }
+
+    return photo;
   }
 
   async reorder(items: { id: string; sortOrder: number }[]) {
