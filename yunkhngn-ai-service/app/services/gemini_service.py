@@ -145,3 +145,51 @@ Instructions: Answer based on provided content. Be helpful, concise, professiona
     client = _get_client(api_key)
     response = client.models.generate_content(model="gemini-3-flash-preview", contents=contents)
     return response.text
+
+async def generate_tarot_reading(question: str, cards: list[dict], api_key: str | None = None) -> str:
+    positions = ['Quá khứ', 'Hiện tại', 'Tương lai']
+    card_descriptions = "\n\n".join(
+        f"Thẻ {positions[i]} - {card['name']}: {card['description']}"
+        for i, card in enumerate(cards)
+    )
+
+    prompt = f"""Bạn là một thầy bói Tarot chuyên nghiệp. Hãy phân tích câu hỏi của người dùng dựa trên 3 lá bài Tarot được rút ra.
+
+Câu hỏi của người dùng: "{question}"
+
+Ba lá bài Tarot:
+{card_descriptions}
+
+YÊU CẦU FORMAT MARKDOWN:
+- Viết bằng tiếng Việt, giọng điệu ấm áp, chân thành
+- Sử dụng markdown: **in đậm** cho tiêu đề quan trọng, *in nghiêng* cho nhấn mạnh, - gạch đầu dòng cho danh sách
+- Chỉ viết ĐÚNG 4 đoạn, mỗi đoạn khoảng 3-4 dòng
+- Format rõ ràng, dễ đọc với markdown
+
+CẤU TRÚC:
+**1. Ý nghĩa tổng quan:**
+- Phân tích ngắn gọn về 3 lá bài trong bối cảnh câu hỏi
+- Sử dụng **in đậm** cho tên lá bài quan trọng
+- Khoảng 3-4 dòng
+
+**2. Mối liên hệ:**
+- Giải thích mối liên hệ giữa quá khứ, hiện tại và tương lai
+- Sử dụng *in nghiêng* để nhấn mạnh điểm quan trọng
+- Khoảng 3-4 dòng
+
+**3.: Lời khuyên:**
+- Đưa ra lời khuyên cụ thể dựa trên kết quả
+- Sử dụng gạch đầu dòng (-) cho các lời khuyên
+- Khoảng 3-4 dòng
+
+**Kết luận:**
+- Tóm tắt và triển vọng, nếu là câu hỏi yes, no question, thì trả lời là yes hoặc no, chắc chắn về đáp án, không chung chung
+- Khoảng 3-4 dòng
+
+**Bói toán bởi**
+_Hệ thống AI tiên tri Tarot của yunkhngn_
+Hãy viết ngắn gọn, súc tích, có xuống dòng ở các đầu mục, sử dụng markdown để làm nổi bật các phần quan trọng."""
+
+    client = _get_client(api_key)
+    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
+    return response.text
