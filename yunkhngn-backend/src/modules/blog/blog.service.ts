@@ -6,6 +6,8 @@ import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
 import { AiService } from '../ai/ai.service';
 import { Blog } from './domain/blog.entity';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
+import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 
 @Injectable()
 export class BlogService {
@@ -16,6 +18,7 @@ export class BlogService {
     private readonly newsletterService: NewsletterService,
     private readonly configService: ConfigService,
     private readonly aiService: AiService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
@@ -125,6 +128,26 @@ export class BlogService {
 
     this.logger.log(`Updating blog post ID: ${id}`);
 
+    // --- NEW: Collect old images to delete ---
+    const imagesToDelete: string[] = [];
+    if (
+      data.thumbnail !== undefined &&
+      data.thumbnail !== currentBlog.thumbnail
+    ) {
+      if (currentBlog.thumbnail) imagesToDelete.push(currentBlog.thumbnail);
+    }
+    if (
+      data.seoImage !== undefined &&
+      data.seoImage !== currentBlog.seoImage
+    ) {
+      if (currentBlog.seoImage) imagesToDelete.push(currentBlog.seoImage);
+    }
+    if (data.contentJSON !== undefined) {
+      const oldImages = extractImagesFromJsonContent(currentBlog.contentJSON);
+      const newImages = extractImagesFromJsonContent(data.contentJSON);
+      imagesToDelete.push(...oldImages.filter((img) => !newImages.includes(img)));
+    }
+
     const updatedBlog = await this.blogRepository.update(id, data);
 
     // Sync to RAG if published
@@ -151,6 +174,11 @@ export class BlogService {
       await this.sendNewsletterForBlog(updatedBlog);
     }
 
+    // --- NEW: Trigger async deletion ---
+    if (imagesToDelete.length > 0) {
+      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    }
+
     return updatedBlog;
   }
 
@@ -158,6 +186,14 @@ export class BlogService {
     const blog = await this.blogRepository.delete(id);
     if (blog) {
       await this.aiService.syncDocument('blog', id, '', {}, 'delete');
+
+      // Cleanup all associated Cloudinary images
+      const imagesToDelete = [
+        blog.thumbnail,
+        blog.seoImage,
+        ...extractImagesFromJsonContent(blog.contentJSON),
+      ];
+      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
     return blog;
   }

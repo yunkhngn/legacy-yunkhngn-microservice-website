@@ -7,9 +7,10 @@ import { PrismaBlogRepository } from './infrastructure/blog.repository';
 import { NewsletterModule } from '../integrations/newsletter/newsletter.module';
 import { PrismaModule } from '../../database/prisma/prisma.module';
 import { AiModule } from '../ai/ai.module';
+import { CloudinaryModule } from '../integrations/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [PrismaModule, NewsletterModule, AiModule],
+  imports: [PrismaModule, NewsletterModule, AiModule, CloudinaryModule],
   controllers: [BlogController],
   providers: [
     BlogService,

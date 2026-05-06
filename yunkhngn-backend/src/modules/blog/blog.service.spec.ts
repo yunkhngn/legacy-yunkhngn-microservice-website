@@ -4,6 +4,7 @@ import { BlogService } from './blog.service';
 import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
 import { AiService } from '../ai/ai.service';
+import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 
 const mockConfigService = {
   get: jest.fn((key: string) =>
@@ -31,6 +32,10 @@ const mockAiService = {
   syncDocument: jest.fn(),
 };
 
+const mockCloudinaryService = {
+  deleteImagesSafely: jest.fn(),
+};
+
 describe('BlogService', () => {
   let service: BlogService;
   let repository: typeof mockBlogRepository;
@@ -43,6 +48,7 @@ describe('BlogService', () => {
         { provide: NewsletterService, useValue: mockNewsletterService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: AiService, useValue: mockAiService },
+        { provide: CloudinaryService, useValue: mockCloudinaryService },
       ],
     }).compile();
 
