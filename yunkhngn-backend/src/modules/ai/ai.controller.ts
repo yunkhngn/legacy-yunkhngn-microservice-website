@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { FirebaseAuthGuard } from '../../common/guards';
@@ -6,10 +6,53 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 @ApiTags('AI')
 @Controller('ai')
-@UseGuards(FirebaseAuthGuard, ThrottlerGuard)
+@UseGuards(ThrottlerGuard)
 @Throttle({ default: { limit: 20, ttl: 60000 } })
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  @Post('tarot')
+  @ApiOperation({ summary: 'Generate tarot reading (public)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        question: { type: 'string' },
+        cards: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  async generateTarotReading(
+    @Body('question') question: string,
+    @Body('cards') cards: { name: string; description: string }[],
+  ) {
+    if (!question || !cards || !Array.isArray(cards) || cards.length !== 3) {
+      throw new HttpException(
+        'Invalid request. Question and 3 cards are required.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    try {
+      const analysis = await this.aiService.generateTarotReading(question, cards);
+      return { analysis };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        'AI service unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
 
   @Post('generate')
   @ApiBearerAuth()
