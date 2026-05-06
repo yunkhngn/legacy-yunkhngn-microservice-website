@@ -19,4 +19,4 @@ import { CloudinaryModule } from '../integrations/cloudinary/cloudinary.module';
   ],
   exports: [JournalService],
 })
-export class JournalModule { }
+export class JournalModule {}

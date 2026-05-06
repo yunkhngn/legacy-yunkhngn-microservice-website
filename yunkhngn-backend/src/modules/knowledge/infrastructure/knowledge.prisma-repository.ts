@@ -8,7 +8,9 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Partial<KnowledgeEntry>): Promise<KnowledgeEntry> {
-    return await (this.prisma as any).knowledgeEntry.create({ data: data as any });
+    return await (this.prisma as any).knowledgeEntry.create({
+      data: data as any,
+    });
   }
 
   async findAll(): Promise<KnowledgeEntry[]> {
@@ -18,7 +20,9 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
   }
 
   async findById(id: string): Promise<KnowledgeEntry | null> {
-    return await (this.prisma as any).knowledgeEntry.findUnique({ where: { id } });
+    return await (this.prisma as any).knowledgeEntry.findUnique({
+      where: { id },
+    });
   }
 
   async findByCategory(category: string): Promise<KnowledgeEntry[]> {

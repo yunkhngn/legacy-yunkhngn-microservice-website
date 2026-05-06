@@ -248,13 +248,14 @@ export class LetterService {
 
     const letter = await this.letterRepository.update(id, data);
 
-      this.triggerProcessing(letter.id, letter.pages).catch((err) =>
+    if (shouldReprocess && letter.pages) {
+      void this.triggerProcessing(letter.id, letter.pages).catch((err) =>
         this.logger.error('Letter processing trigger failed', err.stack),
       );
     }
 
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return this.stripSensitive(letter);
@@ -274,7 +275,7 @@ export class LetterService {
     const deleted = await this.letterRepository.delete(id);
 
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return deleted;
@@ -300,7 +301,7 @@ export class LetterService {
     const count = await this.letterRepository.deleteMany(ids);
 
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return { deleted: count };

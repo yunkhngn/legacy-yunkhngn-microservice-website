@@ -110,9 +110,13 @@ export class ProjectService {
       if (currentProject.seoImage) imagesToDelete.push(currentProject.seoImage);
     }
     if (data.contentJSON !== undefined) {
-      const oldImages = extractImagesFromJsonContent(currentProject.contentJSON);
+      const oldImages = extractImagesFromJsonContent(
+        currentProject.contentJSON,
+      );
       const newImages = extractImagesFromJsonContent(data.contentJSON);
-      imagesToDelete.push(...oldImages.filter((img) => !newImages.includes(img)));
+      imagesToDelete.push(
+        ...oldImages.filter((img) => !newImages.includes(img)),
+      );
     }
     const project = await this.projectRepository.update(id, data);
 
@@ -129,7 +133,7 @@ export class ProjectService {
     );
 
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return project;
@@ -147,7 +151,7 @@ export class ProjectService {
         project.seoImage,
         ...extractImagesFromJsonContent(project.contentJSON),
       ];
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
     return project;
   }

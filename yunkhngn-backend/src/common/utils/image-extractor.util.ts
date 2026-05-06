@@ -1,6 +1,4 @@
-export function extractImagesFromJsonContent(
-  content: string | null | undefined,
-): string[] {
+export function extractImagesFromJsonContent(content: string): string[] {
   if (!content) return [];
 
   const urls: string[] = [];
@@ -22,7 +20,7 @@ export function extractImagesFromJsonContent(
 
     findImages(parsed);
     return urls;
-  } catch (e) {
+  } catch {
     // If not valid JSON, it might be raw HTML
     const imgRegex = /<img[^>]+src="?([^"\s]+)"?\s*[^>]*>/g;
     let match;

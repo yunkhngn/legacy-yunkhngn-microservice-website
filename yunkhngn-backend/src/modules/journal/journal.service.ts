@@ -14,7 +14,7 @@ export class JournalService {
     private readonly journalRepository: IJournalRepository,
     private readonly notificationsService: NotificationsService,
     private readonly cloudinaryService: CloudinaryService,
-  ) { }
+  ) {}
 
   async create(createJournalDto: CreateJournalDto) {
     const { tags, ...rest } = createJournalDto;
@@ -81,7 +81,7 @@ export class JournalService {
     const entry = await this.journalRepository.update(id, data);
 
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return this.formatEntry(entry);
@@ -103,9 +103,9 @@ export class JournalService {
     if (deleted && deleted.images) {
       try {
         const images = JSON.parse(deleted.images);
-        this.cloudinaryService.deleteImagesSafely(images);
-      } catch (e) {
-        this.logger.error(`Failed to parse images for deletion in journal ${id}`);
+        void this.cloudinaryService.deleteImagesSafely(images);
+      } catch {
+        // Ignore parse errors
       }
     }
     return deleted;
@@ -130,9 +130,7 @@ export class JournalService {
             `New ${type} reaction on journal entry`,
             `/journal#journal-${journalId}`,
           )
-          .catch((err) =>
-            this.logger.error('Failed to send real-time notification', err),
-          );
+          .catch(() => {});
 
         return { action: 'updated', type };
       }

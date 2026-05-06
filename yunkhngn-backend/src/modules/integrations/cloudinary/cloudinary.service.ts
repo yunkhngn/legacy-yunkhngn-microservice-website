@@ -64,7 +64,7 @@ export class CloudinaryService {
     }
   }
 
-  extractPublicId(url: string): string | null {
+  extractPublicId(url: string): string {
     if (!url || typeof url !== 'string') return null;
     try {
       // Match URL with version segment: /v1234567890/folder/image.jpg
@@ -78,12 +78,12 @@ export class CloudinaryService {
         return uploadMatch[1];
       }
       return null;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
 
-  async deleteImagesSafely(urls: (string | null | undefined)[]): Promise<void> {
+  deleteImagesSafely(urls: string[]): void {
     const validUrls = urls.filter(
       (url): url is string => !!url && url.includes('cloudinary.com'),
     );
@@ -104,6 +104,6 @@ export class CloudinaryService {
           }
         }
       }),
-    ).catch((e) => this.logger.error('Error in batch image deletion:', e));
+    ).catch((_e) => this.logger.error('Error in batch image deletion:', _e));
   }
 }

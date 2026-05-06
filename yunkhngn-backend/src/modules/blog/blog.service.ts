@@ -136,16 +136,15 @@ export class BlogService {
     ) {
       if (currentBlog.thumbnail) imagesToDelete.push(currentBlog.thumbnail);
     }
-    if (
-      data.seoImage !== undefined &&
-      data.seoImage !== currentBlog.seoImage
-    ) {
+    if (data.seoImage !== undefined && data.seoImage !== currentBlog.seoImage) {
       if (currentBlog.seoImage) imagesToDelete.push(currentBlog.seoImage);
     }
     if (data.contentJSON !== undefined) {
       const oldImages = extractImagesFromJsonContent(currentBlog.contentJSON);
       const newImages = extractImagesFromJsonContent(data.contentJSON);
-      imagesToDelete.push(...oldImages.filter((img) => !newImages.includes(img)));
+      imagesToDelete.push(
+        ...oldImages.filter((img) => !newImages.includes(img)),
+      );
     }
 
     const updatedBlog = await this.blogRepository.update(id, data);
@@ -176,7 +175,7 @@ export class BlogService {
 
     // --- NEW: Trigger async deletion ---
     if (imagesToDelete.length > 0) {
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
     return updatedBlog;
@@ -193,7 +192,7 @@ export class BlogService {
         blog.seoImage,
         ...extractImagesFromJsonContent(blog.contentJSON),
       ];
-      this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
     return blog;
   }

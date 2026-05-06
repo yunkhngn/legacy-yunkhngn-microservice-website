@@ -95,7 +95,7 @@ export class GalleryService {
 
     if (photo && photo.imageUrl) {
       // Note: Gallery entity has thumbnailUrl but Prisma schema does not — only delete imageUrl
-      this.cloudinaryService.deleteImagesSafely([photo.imageUrl]);
+      void this.cloudinaryService.deleteImagesSafely([photo.imageUrl]);
     }
 
     return photo;
