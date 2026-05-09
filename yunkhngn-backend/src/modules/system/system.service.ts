@@ -59,7 +59,7 @@ export class SystemService {
           },
         }),
         this.prisma.blog.findMany({
-          take: 5,
+          take: 10,
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
@@ -71,7 +71,7 @@ export class SystemService {
           },
         }),
         this.prisma.project.findMany({
-          take: 4,
+          take: 8,
           orderBy: { createdAt: 'desc' },
           select: {
             id: true,
@@ -82,12 +82,12 @@ export class SystemService {
           },
         }),
         this.prisma.gallery.findMany({
-          take: 6,
+          take: 12,
           orderBy: { createdAt: 'desc' },
           select: { id: true, imageUrl: true, caption: true, createdAt: true },
         }),
         this.prisma.contact.findMany({
-          take: 5,
+          take: 10,
           orderBy: { createdAt: 'desc' },
         }),
       ]);
