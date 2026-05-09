@@ -14,10 +14,19 @@ import { AiService } from '../ai/ai.service';
 
 const SYSTEM_SETTINGS_MAP: Record<
   string,
-  { keys: string[]; sortOrder: number; sensitive?: string[] }
+  { keys: string[]; sortOrder: number; sensitive?: string[]; public?: string[] }
 > = {
   General: {
     keys: [
+      'bio',
+      'quote',
+      'email',
+      'homepage_description',
+      'footer_description',
+      'about_content',
+      'comment_forbidden_keywords',
+    ],
+    public: [
       'bio',
       'quote',
       'email',
@@ -36,14 +45,23 @@ const SYSTEM_SETTINGS_MAP: Record<
       'about_image_skills',
       'about_image_contact',
     ],
+    public: [
+      'avatar',
+      'about_image_story',
+      'about_image_journey',
+      'about_image_skills',
+      'about_image_contact',
+    ],
     sortOrder: 1,
   },
   'Social Media': {
     keys: ['facebook', 'github', 'instagram', 'tiktok', 'linkedin'],
+    public: ['facebook', 'github', 'instagram', 'tiktok', 'linkedin'],
     sortOrder: 2,
   },
   'Resume / CV': {
-    keys: ['education', 'experience', 'skills', 'projects', 'cv_url'],
+    keys: ['education', 'experience', 'skills', 'cv_url'],
+    public: ['education', 'experience', 'skills', 'cv_url'],
     sortOrder: 3,
   },
   Cloudinary: {
@@ -53,6 +71,7 @@ const SYSTEM_SETTINGS_MAP: Record<
       'cloudinary_api_secret',
     ],
     sensitive: ['cloudinary_api_secret'],
+    public: ['cloudinary_cloud_name'],
     sortOrder: 4,
   },
   'Email / Resend': {
@@ -72,11 +91,13 @@ const SYSTEM_SETTINGS_MAP: Record<
   GitHub: {
     keys: ['github_api_key', 'github_username', 'github_repo_name'],
     sensitive: ['github_api_key'],
+    public: ['github_username', 'github_repo_name'],
     sortOrder: 7,
   },
   'Music / Last.fm': {
     keys: ['lastfm_api_key', 'lastfm_username'],
     sensitive: ['lastfm_api_key'],
+    public: ['lastfm_username'],
     sortOrder: 8,
   },
   Vercel: {
@@ -93,61 +114,15 @@ const SYSTEM_SETTINGS_MAP: Record<
       'chat_forbidden_words',
     ],
     sensitive: ['gemini_api_key', 'gemini_api_keys', 'chat_api_key'],
+    public: ['ai_persona', 'chat_forbidden_words'],
     sortOrder: 10,
   },
   Other: {
     keys: ['journal_moods'],
+    public: ['journal_moods'],
     sortOrder: 99,
   },
 };
-
-const SYSTEM_SETTINGS = Object.values(SYSTEM_SETTINGS_MAP).flatMap(
-  (g) => g.keys,
-);
-
-const PUBLIC_SETTINGS = [
-  'bio',
-  'quote',
-  'facebook',
-  'github',
-  'instagram',
-  'linkedin',
-  'tiktok',
-  'email',
-  'homepage_description',
-  'footer_description',
-  'about_content',
-  'education',
-  'experience',
-  'skills',
-  'cv_url',
-  'cloudinary_cloud_name',
-  'avatar',
-  'about_image_story',
-  'about_image_journey',
-  'about_image_skills',
-  'about_image_contact',
-  'lastfm_username',
-  'github_username',
-  'github_repo_name',
-  'comment_forbidden_keywords',
-  'chat_forbidden_words',
-  'ai_persona',
-  'journal_moods',
-];
-
-// Legacy list used only for seeding isSensitive on existing rows
-const LEGACY_SENSITIVE_KEYS = [
-  'gemini_api_key',
-  'gemini_api_keys',
-  'cloudinary_api_secret',
-  'resend_api_key',
-  'cloudflare_api_token',
-  'github_api_key',
-  'lastfm_api_key',
-  'chat_api_key',
-  'vercel_api_token',
-];
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
@@ -166,12 +141,14 @@ export class SettingsService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.log('Initializing system settings');
-      for (const [group, { keys, sortOrder, sensitive }] of Object.entries(
+      for (const [group, { keys, sortOrder, sensitive, public: publicKeys }] of Object.entries(
         SYSTEM_SETTINGS_MAP,
       )) {
         for (let i = 0; i < keys.length; i++) {
           const title = keys[i];
           const isSensitive = sensitive?.includes(title) ?? false;
+          const isPublic = publicKeys?.includes(title) ?? false;
+
           const existing = await this.settingsRepository.findByTitle(title);
           if (!existing) {
             await this.settingsRepository.upsert(
@@ -180,12 +157,19 @@ export class SettingsService implements OnModuleInit {
               group,
               sortOrder * 100 + i,
               isSensitive,
+              true, // isSystem
+              isPublic,
             );
-          } else if (!existing.group || existing.group === 'Uncategorized') {
-            await this.settingsRepository.updateGroup(
-              existing.id,
+          } else {
+            // Update flags and metadata for existing system settings
+            await this.settingsRepository.upsert(
+              title,
+              existing.content,
               group,
-              sortOrder * 100 + i,
+              existing.sortOrder || sortOrder * 100 + i,
+              existing.isSensitive || isSensitive,
+              true, // isSystem
+              isPublic,
             );
           }
         }
@@ -200,7 +184,8 @@ export class SettingsService implements OnModuleInit {
   }
 
   async getPublicSettings(): Promise<Setting[]> {
-    return this.settingsRepository.findByTitles(PUBLIC_SETTINGS);
+    const all = await this.settingsRepository.findAll();
+    return all.filter(s => s.isPublic);
   }
 
   async getAdminSettings(): Promise<any[]> {
@@ -301,29 +286,55 @@ export class SettingsService implements OnModuleInit {
     const group =
       updateSettingsDto.group || existing?.group || 'Uncategorized';
     const sortOrder = updateSettingsDto.sortOrder ?? existing?.sortOrder ?? 0;
+    const isSystem = updateSettingsDto.isSystem ?? existing?.isSystem ?? false;
+    const isPublic = updateSettingsDto.isPublic ?? existing?.isPublic ?? false;
 
     this.logger.log(`Updating setting: ${settingTitle}`);
 
-    // If content is undefined (masked sensitive), only update group/sensitivity
+    // If content is undefined (masked sensitive), only update metadata without touching content
     if (content === undefined) {
-      // Update only metadata without touching content
-      const updated = await this.settingsRepository.upsert(
+      const metadata = {
         settingTitle,
-        existing?.content || '',
         group,
         sortOrder,
         isSensitive,
-      );
+        isSystem,
+        isPublic,
+      };
+
+      const updated = updateSettingsDto.id
+        ? await this.settingsRepository.update(updateSettingsDto.id, metadata)
+        : await this.settingsRepository.upsert(
+          settingTitle,
+          existing?.content || '',
+          group,
+          sortOrder,
+          isSensitive,
+          isSystem,
+          isPublic,
+        );
       return updated;
     }
 
-    const updatedSetting = await this.settingsRepository.upsert(
-      settingTitle,
-      content,
-      group,
-      sortOrder,
-      isSensitive,
-    );
+    const updatedSetting = updateSettingsDto.id
+      ? await this.settingsRepository.update(updateSettingsDto.id, {
+        settingTitle,
+        content,
+        group,
+        sortOrder,
+        isSensitive,
+        isSystem,
+        isPublic,
+      })
+      : await this.settingsRepository.upsert(
+        settingTitle,
+        content,
+        group,
+        sortOrder,
+        isSensitive,
+        isSystem,
+        isPublic,
+      );
 
     // Sync to RAG if it's content-related
     const RAG_SYNC_KEYS = [
@@ -344,7 +355,7 @@ export class SettingsService implements OnModuleInit {
 
   async delete(id: number) {
     const setting = await this.settingsRepository.findById(id);
-    if (setting && SYSTEM_SETTINGS.includes(setting.settingTitle)) {
+    if (setting && setting.isSystem) {
       throw new BadRequestException(
         `Cannot delete system setting: ${setting.settingTitle}`,
       );

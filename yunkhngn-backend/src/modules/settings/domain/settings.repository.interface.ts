@@ -7,6 +7,8 @@ export interface ISettingsRepository {
     group: string,
     sortOrder: number,
     isSensitive?: boolean,
+    isSystem?: boolean,
+    isPublic?: boolean,
   ): Promise<Setting>;
   create(
     title: string,
@@ -14,6 +16,8 @@ export interface ISettingsRepository {
     group: string,
     sortOrder: number,
     isSensitive?: boolean,
+    isSystem?: boolean,
+    isPublic?: boolean,
   ): Promise<Setting>;
   updateGroup(id: number, group: string, sortOrder: number): Promise<Setting>;
   findAll(): Promise<Setting[]>;
@@ -21,6 +25,7 @@ export interface ISettingsRepository {
   findById(id: number): Promise<Setting | null>;
   findByTitles(titles: string[]): Promise<Setting[]>;
   delete(id: number): Promise<Setting>;
+  update(id: number, data: Partial<Setting>): Promise<Setting>;
 }
 
 export const ISettingsRepository = Symbol('ISettingsRepository');

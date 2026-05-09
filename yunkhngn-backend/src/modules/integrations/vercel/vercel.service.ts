@@ -5,7 +5,7 @@ import { SettingsService } from '../../settings/settings.service';
 export class VercelService {
   private readonly logger = new Logger(VercelService.name);
 
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   private async getCredentials() {
     const token =
@@ -46,6 +46,8 @@ export class VercelService {
     const { from, to } = this.getDateRange(period);
     const teamQuery = creds.teamId ? `&teamId=${creds.teamId}` : '';
 
+    this.logger.log(`Fetching Vercel analytics for projectId: ${creds.projectId.substring(0, 4)}...${creds.projectId.substring(creds.projectId.length - 4)}, teamId: ${creds.teamId ? 'Set' : 'Not Set'}`);
+
     try {
       const [statsRes, timeseriesRes] = await Promise.all([
         fetch(
@@ -59,6 +61,13 @@ export class VercelService {
       ]);
 
       if (!statsRes.ok || !timeseriesRes.ok) {
+        const statsError = !statsRes.ok ? await statsRes.text() : 'OK';
+        const timeseriesError = !timeseriesRes.ok ? await timeseriesRes.text() : 'OK';
+
+        this.logger.error(
+          `Vercel API error details: statsStatus=${statsRes.status}, statsError=${statsError}, timeseriesStatus=${timeseriesRes.status}, timeseriesError=${timeseriesError}`
+        );
+
         throw new Error(
           `Vercel API error: stats=${statsRes.status}, timeseries=${timeseriesRes.status}`,
         );
@@ -71,7 +80,7 @@ export class VercelService {
 
       return { stats, timeseries };
     } catch (error) {
-      this.logger.error('Failed to fetch Vercel analytics', error);
+      this.logger.error('Failed to fetch Vercel analytics', error.message);
       throw error;
     }
   }
@@ -90,12 +99,14 @@ export class VercelService {
       );
 
       if (!res.ok) {
+        const errorBody = await res.text();
+        this.logger.error(`Vercel Speed Insights API error: status=${res.status}, body=${errorBody}`);
         throw new Error(`Vercel Speed Insights API error: ${res.status}`);
       }
 
       return res.json();
     } catch (error) {
-      this.logger.error('Failed to fetch Speed Insights', error);
+      this.logger.error('Failed to fetch Speed Insights', error.message);
       throw error;
     }
   }

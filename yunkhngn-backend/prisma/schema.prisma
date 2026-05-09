@@ -192,6 +192,8 @@ model Settings {
   group        String  @default("Uncategorized")
   sortOrder    Int     @default(0)
   isSensitive  Boolean @default(false)
+  isSystem     Boolean @default(false)
+  isPublic     Boolean @default(false)
 
   @@index([group])
   @@map("settings")

@@ -13,6 +13,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     group: string = 'Uncategorized',
     sortOrder: number = 0,
     isSensitive?: boolean,
+    isSystem?: boolean,
+    isPublic?: boolean,
   ): Promise<Setting> {
     return this.prisma.settings.upsert({
       where: { settingTitle: title },
@@ -21,6 +23,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
         group,
         sortOrder,
         ...(isSensitive !== undefined ? { isSensitive } : {}),
+        ...(isSystem !== undefined ? { isSystem } : {}),
+        ...(isPublic !== undefined ? { isPublic } : {}),
       },
       create: {
         settingTitle: title,
@@ -28,6 +32,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
         group,
         sortOrder,
         isSensitive: isSensitive ?? false,
+        isSystem: isSystem ?? false,
+        isPublic: isPublic ?? false,
       },
     });
   }
@@ -38,6 +44,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     group: string,
     sortOrder: number,
     isSensitive?: boolean,
+    isSystem?: boolean,
+    isPublic?: boolean,
   ): Promise<Setting> {
     return this.prisma.settings.create({
       data: {
@@ -46,6 +54,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
         group,
         sortOrder,
         isSensitive: isSensitive ?? false,
+        isSystem: isSystem ?? false,
+        isPublic: isPublic ?? false,
       },
     });
   }
@@ -91,6 +101,13 @@ export class PrismaSettingsRepository implements ISettingsRepository {
   async delete(id: number): Promise<Setting> {
     return this.prisma.settings.delete({
       where: { id },
+    });
+  }
+
+  async update(id: number, data: Partial<Setting>): Promise<Setting> {
+    return this.prisma.settings.update({
+      where: { id },
+      data,
     });
   }
 }
