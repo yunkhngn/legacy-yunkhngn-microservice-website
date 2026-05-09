@@ -12,4 +12,7 @@ export class CreateSettingsDto {
   @IsString()
   @IsOptional()
   group?: string;
+
+  @IsOptional()
+  isSensitive?: boolean;
 }

@@ -5,7 +5,20 @@ export class UpdateSettingsDto {
   @IsNotEmpty()
   settingTitle: string;
 
+  @IsOptional()
+  id?: number;
+
   @IsString()
   @IsOptional()
   content?: string;
+
+  @IsString()
+  @IsOptional()
+  group?: string;
+
+  @IsOptional()
+  sortOrder?: number;
+
+  @IsOptional()
+  isSensitive?: boolean;
 }

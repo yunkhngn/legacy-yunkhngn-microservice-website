@@ -14,7 +14,7 @@ import { AiService } from '../ai/ai.service';
 
 const SYSTEM_SETTINGS_MAP: Record<
   string,
-  { keys: string[]; sortOrder: number }
+  { keys: string[]; sortOrder: number; sensitive?: string[] }
 > = {
   General: {
     keys: [
@@ -52,10 +52,12 @@ const SYSTEM_SETTINGS_MAP: Record<
       'cloudinary_api_key',
       'cloudinary_api_secret',
     ],
+    sensitive: ['cloudinary_api_secret'],
     sortOrder: 4,
   },
   'Email / Resend': {
     keys: ['resend_api_key', 'resend_domain', 'admin_email'],
+    sensitive: ['resend_api_key'],
     sortOrder: 5,
   },
   Cloudflare: {
@@ -64,18 +66,22 @@ const SYSTEM_SETTINGS_MAP: Record<
       'cloudflare_account_id',
       'cloudflare_api_token',
     ],
+    sensitive: ['cloudflare_api_token'],
     sortOrder: 6,
   },
   GitHub: {
     keys: ['github_api_key', 'github_username', 'github_repo_name'],
+    sensitive: ['github_api_key'],
     sortOrder: 7,
   },
   'Music / Last.fm': {
     keys: ['lastfm_api_key', 'lastfm_username'],
+    sensitive: ['lastfm_api_key'],
     sortOrder: 8,
   },
   Vercel: {
     keys: ['vercel_api_token', 'vercel_project_id', 'vercel_team_id'],
+    sensitive: ['vercel_api_token'],
     sortOrder: 9,
   },
   AI: {
@@ -86,6 +92,7 @@ const SYSTEM_SETTINGS_MAP: Record<
       'chat_api_key',
       'chat_forbidden_words',
     ],
+    sensitive: ['gemini_api_key', 'gemini_api_keys', 'chat_api_key'],
     sortOrder: 10,
   },
   Other: {
@@ -129,7 +136,8 @@ const PUBLIC_SETTINGS = [
   'journal_moods',
 ];
 
-const SENSITIVE_KEYS = [
+// Legacy list used only for seeding isSensitive on existing rows
+const LEGACY_SENSITIVE_KEYS = [
   'gemini_api_key',
   'gemini_api_keys',
   'cloudinary_api_secret',
@@ -158,11 +166,12 @@ export class SettingsService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.log('Initializing system settings');
-      for (const [group, { keys, sortOrder }] of Object.entries(
+      for (const [group, { keys, sortOrder, sensitive }] of Object.entries(
         SYSTEM_SETTINGS_MAP,
       )) {
         for (let i = 0; i < keys.length; i++) {
           const title = keys[i];
+          const isSensitive = sensitive?.includes(title) ?? false;
           const existing = await this.settingsRepository.findByTitle(title);
           if (!existing) {
             await this.settingsRepository.upsert(
@@ -170,6 +179,7 @@ export class SettingsService implements OnModuleInit {
               '',
               group,
               sortOrder * 100 + i,
+              isSensitive,
             );
           } else if (!existing.group || existing.group === 'Uncategorized') {
             await this.settingsRepository.updateGroup(
@@ -197,8 +207,7 @@ export class SettingsService implements OnModuleInit {
     const settings = await this.settingsRepository.findAll();
 
     return settings.map((s) => {
-      // Mask sensitive keys for admin UI
-      if (SENSITIVE_KEYS.includes(s.settingTitle) && s.content) {
+      if (s.isSensitive && s.content) {
         return { ...s, content: '********' };
       }
       return s;
@@ -208,9 +217,9 @@ export class SettingsService implements OnModuleInit {
   async getGroupedSettings(): Promise<{ group: string; settings: any[] }[]> {
     const all = await this.settingsRepository.findAll();
 
-    // Mask sensitive values
+    // Mask sensitive values using the DB flag
     const masked = all.map((s) => {
-      if (SENSITIVE_KEYS.includes(s.settingTitle) && s.content) {
+      if (s.isSensitive && s.content) {
         return { ...s, content: '********' };
       }
       return s;
@@ -239,15 +248,27 @@ export class SettingsService implements OnModuleInit {
       });
   }
 
-  async create(settingTitle: string, content: string, group?: string) {
+  async create(
+    settingTitle: string,
+    content: string,
+    group?: string,
+    isSensitive?: boolean,
+  ) {
     if (await this.settingsRepository.findByTitle(settingTitle)) {
       throw new BadRequestException(`Setting "${settingTitle}" already exists`);
     }
+
+    let finalContent = content || '';
+    if (isSensitive && finalContent) {
+      finalContent = this.encryptionService.encrypt(finalContent);
+    }
+
     return this.settingsRepository.create(
       settingTitle,
-      content || '',
+      finalContent,
       group || 'Uncategorized',
       0,
+      isSensitive ?? false,
     );
   }
 
@@ -259,22 +280,49 @@ export class SettingsService implements OnModuleInit {
     const { settingTitle } = updateSettingsDto;
     let { content } = updateSettingsDto;
 
+    const existing = await this.settingsRepository.findByTitle(settingTitle);
+
+    // Determine sensitivity: use DTO override if provided, otherwise keep existing
+    const isSensitive =
+      updateSettingsDto.isSensitive !== undefined
+        ? updateSettingsDto.isSensitive
+        : existing?.isSensitive ?? false;
+
     // Encrypt sensitive keys
-    if (SENSITIVE_KEYS.includes(settingTitle)) {
+    if (isSensitive) {
       if (content === '********') {
-        // Ignore update if it's the mask
-        return;
+        // Ignore content update if it's the mask, but still allow group/sensitivity changes
+        content = undefined;
+      } else if (content !== undefined) {
+        content = this.encryptionService.encrypt(content);
       }
-      content = this.encryptionService.encrypt(content);
     }
 
+    const group =
+      updateSettingsDto.group || existing?.group || 'Uncategorized';
+    const sortOrder = updateSettingsDto.sortOrder ?? existing?.sortOrder ?? 0;
+
     this.logger.log(`Updating setting: ${settingTitle}`);
-    const existing = await this.settingsRepository.findByTitle(settingTitle);
+
+    // If content is undefined (masked sensitive), only update group/sensitivity
+    if (content === undefined) {
+      // Update only metadata without touching content
+      const updated = await this.settingsRepository.upsert(
+        settingTitle,
+        existing?.content || '',
+        group,
+        sortOrder,
+        isSensitive,
+      );
+      return updated;
+    }
+
     const updatedSetting = await this.settingsRepository.upsert(
       settingTitle,
       content,
-      existing?.group || 'Uncategorized',
-      existing?.sortOrder || 0,
+      group,
+      sortOrder,
+      isSensitive,
     );
 
     // Sync to RAG if it's content-related
@@ -312,7 +360,7 @@ export class SettingsService implements OnModuleInit {
 
       if (!setting || !setting.content) return null;
 
-      if (SENSITIVE_KEYS.includes(title)) {
+      if (setting.isSensitive) {
         return this.encryptionService.decrypt(setting.content);
       }
 
@@ -347,6 +395,7 @@ export class SettingsService implements OnModuleInit {
       encrypted,
       'AI',
       1001,
+      true,
     );
   }
 

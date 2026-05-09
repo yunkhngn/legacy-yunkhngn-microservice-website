@@ -191,6 +191,7 @@ model Settings {
   content      String? @db.NVarChar(Max)
   group        String  @default("Uncategorized")
   sortOrder    Int     @default(0)
+  isSensitive  Boolean @default(false)
 
   @@index([group])
   @@map("settings")
