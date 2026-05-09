@@ -12,49 +12,91 @@ import { ISettingsRepository } from './domain/settings.repository.interface';
 import { Setting } from './domain/setting.entity';
 import { AiService } from '../ai/ai.service';
 
-const SYSTEM_SETTINGS = [
-  'bio',
-  'quote',
-  'facebook',
-  'github',
-  'instagram',
-  'linkedin',
-  'tiktok',
-  'email',
-  'homepage_description',
-  'footer_description',
-  'about_content',
-  'comment_forbidden_keywords',
-  'chat_forbidden_words',
-  'education',
-  'experience',
-  'skills',
-  'cv_url',
-  'gemini_api_key',
-  'gemini_api_keys',
-  'ai_persona',
-  'cloudinary_cloud_name',
-  'cloudinary_api_key',
-  'cloudinary_api_secret',
-  'resend_api_key',
-  'resend_domain',
-  'admin_email',
-  'cloudflare_zone_id',
-  'cloudflare_account_id',
-  'cloudflare_api_token',
-  'github_api_key',
-  'github_username',
-  'github_repo_name',
-  'chat_api_key',
-  'avatar',
-  'about_image_story',
-  'about_image_journey',
-  'about_image_skills',
-  'about_image_contact',
-  'lastfm_api_key',
-  'lastfm_username',
-  'journal_moods',
-];
+const SYSTEM_SETTINGS_MAP: Record<
+  string,
+  { keys: string[]; sortOrder: number }
+> = {
+  General: {
+    keys: [
+      'bio',
+      'quote',
+      'email',
+      'homepage_description',
+      'footer_description',
+      'about_content',
+      'comment_forbidden_keywords',
+    ],
+    sortOrder: 0,
+  },
+  Appearance: {
+    keys: [
+      'avatar',
+      'about_image_story',
+      'about_image_journey',
+      'about_image_skills',
+      'about_image_contact',
+    ],
+    sortOrder: 1,
+  },
+  'Social Media': {
+    keys: ['facebook', 'github', 'instagram', 'tiktok', 'linkedin'],
+    sortOrder: 2,
+  },
+  'Resume / CV': {
+    keys: ['education', 'experience', 'skills', 'projects', 'cv_url'],
+    sortOrder: 3,
+  },
+  Cloudinary: {
+    keys: [
+      'cloudinary_cloud_name',
+      'cloudinary_api_key',
+      'cloudinary_api_secret',
+    ],
+    sortOrder: 4,
+  },
+  'Email / Resend': {
+    keys: ['resend_api_key', 'resend_domain', 'admin_email'],
+    sortOrder: 5,
+  },
+  Cloudflare: {
+    keys: [
+      'cloudflare_zone_id',
+      'cloudflare_account_id',
+      'cloudflare_api_token',
+    ],
+    sortOrder: 6,
+  },
+  GitHub: {
+    keys: ['github_api_key', 'github_username', 'github_repo_name'],
+    sortOrder: 7,
+  },
+  'Music / Last.fm': {
+    keys: ['lastfm_api_key', 'lastfm_username'],
+    sortOrder: 8,
+  },
+  Vercel: {
+    keys: ['vercel_api_token', 'vercel_project_id', 'vercel_team_id'],
+    sortOrder: 9,
+  },
+  AI: {
+    keys: [
+      'gemini_api_key',
+      'gemini_api_keys',
+      'ai_persona',
+      'chat_api_key',
+      'chat_forbidden_words',
+    ],
+    sortOrder: 10,
+  },
+  Other: {
+    keys: ['journal_moods'],
+    sortOrder: 99,
+  },
+};
+
+const SYSTEM_SETTINGS = Object.values(SYSTEM_SETTINGS_MAP).flatMap(
+  (g) => g.keys,
+);
 
 const PUBLIC_SETTINGS = [
   'bio',
@@ -96,6 +138,7 @@ const SENSITIVE_KEYS = [
   'github_api_key',
   'lastfm_api_key',
   'chat_api_key',
+  'vercel_api_token',
 ];
 
 @Injectable()
@@ -115,10 +158,26 @@ export class SettingsService implements OnModuleInit {
   async onModuleInit() {
     try {
       this.logger.log('Initializing system settings');
-      for (const title of SYSTEM_SETTINGS) {
-        const existing = await this.settingsRepository.findByTitle(title);
-        if (!existing) {
-          await this.settingsRepository.upsert(title, '');
+      for (const [group, { keys, sortOrder }] of Object.entries(
+        SYSTEM_SETTINGS_MAP,
+      )) {
+        for (let i = 0; i < keys.length; i++) {
+          const title = keys[i];
+          const existing = await this.settingsRepository.findByTitle(title);
+          if (!existing) {
+            await this.settingsRepository.upsert(
+              title,
+              '',
+              group,
+              sortOrder * 100 + i,
+            );
+          } else if (!existing.group || existing.group === 'Uncategorized') {
+            await this.settingsRepository.updateGroup(
+              existing.id,
+              group,
+              sortOrder * 100 + i,
+            );
+          }
         }
       }
     } catch (error) {
@@ -146,6 +205,52 @@ export class SettingsService implements OnModuleInit {
     });
   }
 
+  async getGroupedSettings(): Promise<{ group: string; settings: any[] }[]> {
+    const all = await this.settingsRepository.findAll();
+
+    // Mask sensitive values
+    const masked = all.map((s) => {
+      if (SENSITIVE_KEYS.includes(s.settingTitle) && s.content) {
+        return { ...s, content: '********' };
+      }
+      return s;
+    });
+
+    // Group by `group` field
+    const groupMap = new Map<string, any[]>();
+    for (const s of masked) {
+      const g = s.group || 'Uncategorized';
+      if (!groupMap.has(g)) groupMap.set(g, []);
+      groupMap.get(g).push(s);
+    }
+
+    // Sort groups by min sortOrder, sort settings within group by sortOrder
+    return Array.from(groupMap.entries())
+      .map(([group, settings]) => ({
+        group,
+        settings: settings.sort(
+          (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+        ),
+      }))
+      .sort((a, b) => {
+        const aMin = Math.min(...a.settings.map((s) => s.sortOrder || 0));
+        const bMin = Math.min(...b.settings.map((s) => s.sortOrder || 0));
+        return aMin - bMin;
+      });
+  }
+
+  async create(settingTitle: string, content: string, group?: string) {
+    if (await this.settingsRepository.findByTitle(settingTitle)) {
+      throw new BadRequestException(`Setting "${settingTitle}" already exists`);
+    }
+    return this.settingsRepository.create(
+      settingTitle,
+      content || '',
+      group || 'Uncategorized',
+      0,
+    );
+  }
+
   async findAll(): Promise<Setting[]> {
     return this.settingsRepository.findAll();
   }
@@ -164,9 +269,12 @@ export class SettingsService implements OnModuleInit {
     }
 
     this.logger.log(`Updating setting: ${settingTitle}`);
+    const existing = await this.settingsRepository.findByTitle(settingTitle);
     const updatedSetting = await this.settingsRepository.upsert(
       settingTitle,
       content,
+      existing?.group || 'Uncategorized',
+      existing?.sortOrder || 0,
     );
 
     // Sync to RAG if it's content-related
@@ -234,7 +342,12 @@ export class SettingsService implements OnModuleInit {
   private async _saveKeyArray(keys: string[]): Promise<void> {
     const content = JSON.stringify(keys);
     const encrypted = this.encryptionService.encrypt(content);
-    await this.settingsRepository.upsert('gemini_api_keys', encrypted);
+    await this.settingsRepository.upsert(
+      'gemini_api_keys',
+      encrypted,
+      'AI',
+      1001,
+    );
   }
 
   async getRandomApiKey() {

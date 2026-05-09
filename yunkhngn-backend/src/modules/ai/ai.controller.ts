@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { FirebaseAuthGuard } from '../../common/guards';
@@ -43,7 +51,10 @@ export class AiController {
       );
     }
     try {
-      const analysis = await this.aiService.generateTarotReading(question, cards);
+      const analysis = await this.aiService.generateTarotReading(
+        question,
+        cards,
+      );
       return { analysis };
     } catch (error) {
       if (error instanceof HttpException) throw error;

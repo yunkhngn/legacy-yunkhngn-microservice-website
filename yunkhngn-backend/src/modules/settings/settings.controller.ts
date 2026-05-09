@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { CreateSettingsDto } from './dto/create-settings.dto';
 import { FirebaseAuthGuard } from '../../common/guards';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
@@ -37,6 +38,14 @@ export class SettingsController {
   @UseGuards(FirebaseAuthGuard)
   getAdminSettings() {
     return this.settingsService.getAdminSettings();
+  }
+
+  @Get('admin/grouped')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all settings grouped by tab (Admin only)' })
+  @UseGuards(FirebaseAuthGuard)
+  getGroupedSettings() {
+    return this.settingsService.getGroupedSettings();
   }
 
   // --- Gemini API Keys Pool Management ---
@@ -74,6 +83,18 @@ export class SettingsController {
   @UseGuards(FirebaseAuthGuard)
   update(@Body() updateSettingsDto: UpdateSettingsDto) {
     return this.settingsService.update(updateSettingsDto);
+  }
+
+  @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new setting' })
+  @UseGuards(FirebaseAuthGuard)
+  create(@Body() createSettingsDto: CreateSettingsDto) {
+    return this.settingsService.create(
+      createSettingsDto.settingTitle,
+      createSettingsDto.content,
+      createSettingsDto.group,
+    );
   }
 
   @Delete(':id')

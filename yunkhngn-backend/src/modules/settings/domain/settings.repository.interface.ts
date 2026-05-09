@@ -1,7 +1,19 @@
 import { Setting } from './setting.entity';
 
 export interface ISettingsRepository {
-  upsert(title: string, content: string): Promise<Setting>;
+  upsert(
+    title: string,
+    content: string,
+    group: string,
+    sortOrder: number,
+  ): Promise<Setting>;
+  create(
+    title: string,
+    content: string,
+    group: string,
+    sortOrder: number,
+  ): Promise<Setting>;
+  updateGroup(id: number, group: string, sortOrder: number): Promise<Setting>;
   findAll(): Promise<Setting[]>;
   findByTitle(title: string): Promise<Setting | null>;
   findById(id: number): Promise<Setting | null>;
