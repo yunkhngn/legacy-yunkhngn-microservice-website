@@ -189,7 +189,10 @@ model Settings {
   id           Int     @id @default(autoincrement())
   settingTitle String  @unique
   content      String? @db.NVarChar(Max)
+  group        String  @default("Uncategorized")
+  sortOrder    Int     @default(0)
 
+  @@index([group])
   @@map("settings")
 }
 
