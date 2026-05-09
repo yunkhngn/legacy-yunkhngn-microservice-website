@@ -6,12 +6,14 @@ export interface ISettingsRepository {
     content: string,
     group: string,
     sortOrder: number,
+    isSensitive?: boolean,
   ): Promise<Setting>;
   create(
     title: string,
     content: string,
     group: string,
     sortOrder: number,
+    isSensitive?: boolean,
   ): Promise<Setting>;
   updateGroup(id: number, group: string, sortOrder: number): Promise<Setting>;
   findAll(): Promise<Setting[]>;

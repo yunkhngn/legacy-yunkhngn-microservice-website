@@ -12,11 +12,23 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     content: string,
     group: string = 'Uncategorized',
     sortOrder: number = 0,
+    isSensitive?: boolean,
   ): Promise<Setting> {
     return this.prisma.settings.upsert({
       where: { settingTitle: title },
-      update: { content, group, sortOrder },
-      create: { settingTitle: title, content, group, sortOrder },
+      update: {
+        content,
+        group,
+        sortOrder,
+        ...(isSensitive !== undefined ? { isSensitive } : {}),
+      },
+      create: {
+        settingTitle: title,
+        content,
+        group,
+        sortOrder,
+        isSensitive: isSensitive ?? false,
+      },
     });
   }
 
@@ -25,9 +37,16 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     content: string,
     group: string,
     sortOrder: number,
+    isSensitive?: boolean,
   ): Promise<Setting> {
     return this.prisma.settings.create({
-      data: { settingTitle: title, content, group, sortOrder },
+      data: {
+        settingTitle: title,
+        content,
+        group,
+        sortOrder,
+        isSensitive: isSensitive ?? false,
+      },
     });
   }
 

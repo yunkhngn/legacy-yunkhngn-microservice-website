@@ -94,6 +94,7 @@ export class SettingsController {
       createSettingsDto.settingTitle,
       createSettingsDto.content,
       createSettingsDto.group,
+      createSettingsDto.isSensitive,
     );
   }
 

@@ -4,4 +4,5 @@ export class Setting {
   content: string;
   group: string;
   sortOrder: number;
+  isSensitive: boolean;
 }
