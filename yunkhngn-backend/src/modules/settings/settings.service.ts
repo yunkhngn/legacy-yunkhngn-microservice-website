@@ -100,11 +100,6 @@ const SYSTEM_SETTINGS_MAP: Record<
     public: ['lastfm_username'],
     sortOrder: 8,
   },
-  Vercel: {
-    keys: ['vercel_api_token', 'vercel_project_id', 'vercel_team_id'],
-    sensitive: ['vercel_api_token'],
-    sortOrder: 9,
-  },
   AI: {
     keys: [
       'gemini_api_key',
@@ -172,6 +167,17 @@ export class SettingsService implements OnModuleInit {
               isPublic,
             );
           }
+        }
+      }
+
+      // Cleanup: Unset isSystem for orphaned settings
+      const allSettings = await this.settingsRepository.findAll();
+      const allMappedKeys = Object.values(SYSTEM_SETTINGS_MAP).flatMap(g => g.keys);
+
+      for (const s of allSettings) {
+        if (s.isSystem && !allMappedKeys.includes(s.settingTitle)) {
+          this.logger.log(`Unmarking orphaned system setting: ${s.settingTitle}`);
+          await this.settingsRepository.update(s.id, { isSystem: false });
         }
       }
     } catch (error) {

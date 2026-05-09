@@ -49,7 +49,7 @@ import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.m
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
 import { NewsletterModule } from './modules/integrations/newsletter/newsletter.module';
-import { VercelModule } from './modules/integrations/vercel/vercel.module';
+
 
 import { HealthController } from './modules/health/health.controller';
 
@@ -103,7 +103,7 @@ import { HealthController } from './modules/health/health.controller';
     MonitorModule,
     ChatLogsModule,
     KnowledgeModule,
-    VercelModule,
+
   ],
   controllers: [AppController, HealthController],
   providers: [
