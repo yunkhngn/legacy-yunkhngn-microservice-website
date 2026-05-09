@@ -5,4 +5,6 @@ export class Setting {
   group: string;
   sortOrder: number;
   isSensitive: boolean;
+  isSystem: boolean;
+  isPublic: boolean;
 }

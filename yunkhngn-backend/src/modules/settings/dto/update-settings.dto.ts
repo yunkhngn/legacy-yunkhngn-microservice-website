@@ -21,4 +21,10 @@ export class UpdateSettingsDto {
 
   @IsOptional()
   isSensitive?: boolean;
+
+  @IsOptional()
+  isSystem?: boolean;
+
+  @IsOptional()
+  isPublic?: boolean;
 }
