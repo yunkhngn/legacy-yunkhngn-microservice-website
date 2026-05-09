@@ -93,4 +93,11 @@ export class PrismaSettingsRepository implements ISettingsRepository {
       where: { id },
     });
   }
+
+  async update(id: number, data: Partial<Setting>): Promise<Setting> {
+    return this.prisma.settings.update({
+      where: { id },
+      data,
+    });
+  }
 }

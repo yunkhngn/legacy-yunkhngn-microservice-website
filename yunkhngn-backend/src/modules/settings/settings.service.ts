@@ -304,26 +304,42 @@ export class SettingsService implements OnModuleInit {
 
     this.logger.log(`Updating setting: ${settingTitle}`);
 
-    // If content is undefined (masked sensitive), only update group/sensitivity
+    // If content is undefined (masked sensitive), only update metadata without touching content
     if (content === undefined) {
-      // Update only metadata without touching content
-      const updated = await this.settingsRepository.upsert(
+      const metadata = {
         settingTitle,
-        existing?.content || '',
         group,
         sortOrder,
         isSensitive,
-      );
+      };
+
+      const updated = updateSettingsDto.id
+        ? await this.settingsRepository.update(updateSettingsDto.id, metadata)
+        : await this.settingsRepository.upsert(
+            settingTitle,
+            existing?.content || '',
+            group,
+            sortOrder,
+            isSensitive,
+          );
       return updated;
     }
 
-    const updatedSetting = await this.settingsRepository.upsert(
-      settingTitle,
-      content,
-      group,
-      sortOrder,
-      isSensitive,
-    );
+    const updatedSetting = updateSettingsDto.id
+      ? await this.settingsRepository.update(updateSettingsDto.id, {
+          settingTitle,
+          content,
+          group,
+          sortOrder,
+          isSensitive,
+        })
+      : await this.settingsRepository.upsert(
+          settingTitle,
+          content,
+          group,
+          sortOrder,
+          isSensitive,
+        );
 
     // Sync to RAG if it's content-related
     const RAG_SYNC_KEYS = [

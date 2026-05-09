@@ -21,6 +21,7 @@ export interface ISettingsRepository {
   findById(id: number): Promise<Setting | null>;
   findByTitles(titles: string[]): Promise<Setting[]>;
   delete(id: number): Promise<Setting>;
+  update(id: number, data: Partial<Setting>): Promise<Setting>;
 }
 
 export const ISettingsRepository = Symbol('ISettingsRepository');
