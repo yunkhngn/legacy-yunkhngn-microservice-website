@@ -6,6 +6,8 @@ import { Project } from './domain/project.entity';
 import { AiService } from '../ai/ai.service';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class ProjectService {
@@ -16,6 +18,7 @@ export class ProjectService {
     private readonly projectRepository: IProjectRepository,
     private readonly aiService: AiService,
     private readonly cloudinaryService: CloudinaryService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
@@ -51,6 +54,7 @@ export class ProjectService {
     const data = this.mapDtoToEntityData(createProjectDto);
     this.logger.log(`Creating new project: ${createProjectDto.title}`);
     const project = await this.projectRepository.create(data);
+    await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG
     await this.aiService.syncDocument(
@@ -119,6 +123,7 @@ export class ProjectService {
       );
     }
     const project = await this.projectRepository.update(id, data);
+    await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG
     await this.aiService.syncDocument(
@@ -142,6 +147,7 @@ export class ProjectService {
   async remove(id: string): Promise<Project> {
     this.logger.log(`Removing project ID: ${id}`);
     const project = await this.projectRepository.delete(id);
+    await this.cacheManager.del('admin_dashboard_stats');
     if (project) {
       await this.aiService.syncDocument('project', id, '', {}, 'delete');
 

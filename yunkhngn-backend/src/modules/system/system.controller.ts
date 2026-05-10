@@ -1,7 +1,8 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SystemService } from './system.service';
 import { FirebaseAuthGuard } from '../../common/guards';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('System')
 @Controller('system')
@@ -10,6 +11,9 @@ export class SystemController {
 
   @Get('stats')
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('system_stats')
+  @CacheTTL(15)
   @ApiOperation({ summary: 'Get system-wide statistics' })
   @UseGuards(FirebaseAuthGuard)
   async getStats() {
@@ -18,6 +22,9 @@ export class SystemController {
 
   @Get('dashboard-stats')
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('admin_dashboard_stats')
+  @CacheTTL(60)
   @ApiOperation({
     summary: 'Get consolidated data metrics for admin dashboard',
   })

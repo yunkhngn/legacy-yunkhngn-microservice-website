@@ -4,6 +4,8 @@ import { EmailService } from '../integrations/email/email.service';
 import { AiService } from '../ai/ai.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Contact } from './domain/contact.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class ContactService {
@@ -15,6 +17,7 @@ export class ContactService {
     private readonly emailService: EmailService,
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async createContact(data: {
@@ -57,6 +60,8 @@ export class ContactService {
         this.logger.error('Failed to send real-time notification', err.stack),
       );
 
+    await this.cacheManager.del('admin_dashboard_stats');
+
     return contact;
   }
 
@@ -74,7 +79,9 @@ export class ContactService {
 
   async updateContactStatus(id: string, status: string): Promise<Contact> {
     this.logger.log(`Updating contact status: ${id} to ${status}`);
-    return this.contactRepository.update(id, { status });
+    const result = await this.contactRepository.update(id, { status });
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 
   async respondToContact(id: string, response: string): Promise<Contact> {
@@ -86,11 +93,13 @@ export class ContactService {
     await this.emailService.sendContactResponse(contact, response);
 
     // Update contact with response
-    return this.contactRepository.update(id, {
+    const result = await this.contactRepository.update(id, {
       adminResponse: response,
       status: 'responded',
       respondedAt: new Date(),
     });
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 
   async generateAiResponse(
@@ -150,7 +159,9 @@ IMPORTANT: Respond in ${lang}. Do not include a subject line.`;
 
   async remove(id: string): Promise<Contact> {
     this.logger.log(`Removing contact ID: ${id}`);
-    return this.contactRepository.delete(id);
+    const result = await this.contactRepository.delete(id);
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 
   async sendCustomEmail(data: {

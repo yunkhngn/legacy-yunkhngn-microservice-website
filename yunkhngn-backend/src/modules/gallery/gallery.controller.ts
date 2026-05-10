@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +20,7 @@ import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
+import { CacheInterceptor, CacheTTL, CacheKey } from '@nestjs/cache-manager';
 
 @ApiTags('Gallery')
 @Controller('gallery')
@@ -35,6 +37,8 @@ export class GalleryController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300) // 5 minutes
   @ApiOperation({ summary: 'Get all photos from gallery' })
   @ApiQuery({ name: 'albumId', required: false })
   @ApiQuery({ name: 'tag', required: false })
@@ -55,6 +59,9 @@ export class GalleryController {
   }
 
   @Get('tags')
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('gallery_tags')
+  @CacheTTL(600) // 10 minutes
   @ApiOperation({ summary: 'Get all unique tags from gallery' })
   getAllTags() {
     return this.galleryService.getAllTags();
@@ -70,6 +77,8 @@ export class GalleryController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(600) // 10 minutes
   @ApiOperation({ summary: 'Get photo by ID' })
   findById(@Param('id') id: string) {
     return this.galleryService.findById(id);

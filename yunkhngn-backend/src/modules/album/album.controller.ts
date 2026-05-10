@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AlbumService } from './album.service';
@@ -15,8 +16,12 @@ import { UpdateAlbumDto } from './dto/update-album.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
 
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+
 @ApiTags('Album')
 @Controller('albums')
+@UseInterceptors(CacheInterceptor)
+@CacheTTL(600) // 10 minutes default
 export class AlbumController {
   constructor(private readonly albumService: AlbumService) {}
 

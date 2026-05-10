@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,6 +22,7 @@ import { UpdateJournalDto } from './dto/update-journal.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
 import { User } from '../auth/user.decorator';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Journal')
 @Controller('journals')
@@ -37,6 +39,8 @@ export class JournalController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300) // 5 minutes
   @ApiOperation({ summary: 'Get all journal entries' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
@@ -48,6 +52,8 @@ export class JournalController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300) // 5 minutes
   @ApiOperation({ summary: 'Get journal entry by ID' })
   findOne(@Param('id') id: string) {
     return this.journalService.findOne(id);

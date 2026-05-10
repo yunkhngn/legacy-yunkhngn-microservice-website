@@ -5,6 +5,7 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +16,7 @@ import {
 import { ChatLogsService } from './chat-logs.service';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Chat Logs')
 @Controller('chat-logs')
@@ -25,6 +27,8 @@ export class ChatLogsController {
 
   @Get()
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60)
   @ApiOperation({ summary: 'Get paginated chat logs (Admin only)' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
