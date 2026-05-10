@@ -156,10 +156,16 @@ export class SettingsService implements OnModuleInit {
               isPublic,
             );
           } else {
-            // Update flags and metadata for existing system settings
+            // If it should be sensitive but doesn't look encrypted (no colon separator), encrypt it
+            let contentToSave = existing.content;
+            if (isSensitive && existing.content && !existing.content.includes(':')) {
+              this.logger.log(`Encrypting plaintext setting to match sensitivity flag: ${title}`);
+              contentToSave = this.encryptionService.encrypt(existing.content);
+            }
+
             await this.settingsRepository.upsert(
               title,
-              existing.content,
+              contentToSave,
               group,
               existing.sortOrder || sortOrder * 100 + i,
               existing.isSensitive || isSensitive,
