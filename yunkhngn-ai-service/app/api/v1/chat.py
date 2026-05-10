@@ -44,7 +44,7 @@ async def public_chat(
                     tarot_resp.raise_for_status()
                     cards = tarot_resp.json()
             except Exception as e:
-                logger.warning(f"Failed to fetch tarot cards: {e}")
+                logger.warning(f"Failed to fetch tarot cards from {TAROT_API_URL}: {e}")
                 return {
                     "text": "Xin lỗi, hệ thống bói Tarot đang bảo trì hoặc gặp sự cố kết nối. Hãy thử lại sau nhé! 🔮",
                     "imageUrl": None,
@@ -54,6 +54,7 @@ async def public_chat(
 
             # Generate AI analysis
             try:
+                # Prepare minimal card data for AI to reduce token usage and improve reliability
                 cards_for_ai = [{"name": c["name"], "description": c["description"]} for c in cards]
                 analysis = await gemini_service.generate_tarot_reading(
                     question=request.message,
@@ -61,19 +62,29 @@ async def public_chat(
                     api_key=x_gemini_api_key
                 )
             except Exception as e:
-                logger.error(f"Failed to generate tarot analysis: {e}")
-                analysis = "Tớ đã rút được các lá bài cho cậu, nhưng hiện tại tớ không thể phân tích sâu hơn được. Cậu có thể tự xem ý nghĩa các lá bài bên dưới nhé!"
+                logger.error(f"Failed to generate tarot analysis: {e}", exc_info=True)
+                analysis = f"DEBUG: Gemini analysis failed: {type(e).__name__}: {e}\n\nTớ đã rút được các lá bài cho cậu, nhưng hiện tại tớ không thể phân tích sâu hơn được. Cậu có thể tự xem ý nghĩa các lá bài bên dưới nhé!"
 
-            # Build tarot card data for frontend display
-            tarot_cards = [
-                {
-                    "name": c["name"],
-                    "description": c["description"],
-                    "image": c["image"] if c["image"].startswith('http') else f"https://tarot.yunkhngn.dev{c['image']}"
-                }
-                for c in cards
-            ]
+            # Build tarot card data for frontend display with absolute URLs
+            # Use rstrip/lstrip to ensure no double slashes or missing slashes
+            base_url = "https://tarot.yunkhngn.dev"
+            tarot_cards = []
+            for c in cards:
+                img_path = c.get("image", "")
+                if not img_path.startswith("http"):
+                    # Ensure path starts with a single slash
+                    img_path = "/" + img_path.lstrip("/")
+                    full_img_url = f"{base_url}{img_path}"
+                else:
+                    full_img_url = img_path
+                
+                tarot_cards.append({
+                    "name": c.get("name", "Unknown Card"),
+                    "description": c.get("description", ""),
+                    "image": full_img_url
+                })
 
+            logger.info(f"Successfully prepared tarot response with {len(tarot_cards)} cards")
             return {
                 "text": analysis,
                 "imageUrl": None,
@@ -98,5 +109,5 @@ async def public_chat(
         }
 
     except Exception as e:
-        logger.error(f"Error in public chat: {e}")
+        logger.error(f"Error in public chat: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
