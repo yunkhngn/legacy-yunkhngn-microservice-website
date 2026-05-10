@@ -93,7 +93,7 @@ FINAL RULES:
         tarot_keywords = [
             'tarot', 'bói bài', 'trải bài', 'xem bài', 'rút bài',
             'bói tarot', 'đọc bài', 'xem tarot', 'rút tarot',
-            'fortune', 'card reading', 'bói', 'xin quẻ', 'gieo quẻ',
+            'fortune', 'card reading', 'xin quẻ', 'gieo quẻ',
         ]
         lower_msg = message.lower()
         return any(kw in lower_msg for kw in tarot_keywords)

@@ -36,26 +36,40 @@ async def public_chat(
         # 2. Detect if it's a tarot request
         if chat_service.is_tarot_request(request.message):
             logger.info(f"Tarot reading request: {request.message}")
-            # Fetch 3 random cards from tarot API
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                tarot_resp = await client.get(TAROT_API_URL)
-                tarot_resp.raise_for_status()
-                cards = tarot_resp.json()
+            cards = []
+            try:
+                # Fetch 3 random cards from tarot API
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    tarot_resp = await client.get(TAROT_API_URL)
+                    tarot_resp.raise_for_status()
+                    cards = tarot_resp.json()
+            except Exception as e:
+                logger.warning(f"Failed to fetch tarot cards: {e}")
+                return {
+                    "text": "Xin lỗi, hệ thống bói Tarot đang bảo trì hoặc gặp sự cố kết nối. Hãy thử lại sau nhé! 🔮",
+                    "imageUrl": None,
+                    "tarotCards": None,
+                    "sources": []
+                }
 
             # Generate AI analysis
-            cards_for_ai = [{"name": c["name"], "description": c["description"]} for c in cards]
-            analysis = await gemini_service.generate_tarot_reading(
-                question=request.message,
-                cards=cards_for_ai,
-                api_key=x_gemini_api_key
-            )
+            try:
+                cards_for_ai = [{"name": c["name"], "description": c["description"]} for c in cards]
+                analysis = await gemini_service.generate_tarot_reading(
+                    question=request.message,
+                    cards=cards_for_ai,
+                    api_key=x_gemini_api_key
+                )
+            except Exception as e:
+                logger.error(f"Failed to generate tarot analysis: {e}")
+                analysis = "Tớ đã rút được các lá bài cho cậu, nhưng hiện tại tớ không thể phân tích sâu hơn được. Cậu có thể tự xem ý nghĩa các lá bài bên dưới nhé!"
 
             # Build tarot card data for frontend display
             tarot_cards = [
                 {
                     "name": c["name"],
                     "description": c["description"],
-                    "image": f"https://tarot.yunkhngn.dev{c['image']}"
+                    "image": c["image"] if c["image"].startswith('http') else f"https://tarot.yunkhngn.dev{c['image']}"
                 }
                 for c in cards
             ]
