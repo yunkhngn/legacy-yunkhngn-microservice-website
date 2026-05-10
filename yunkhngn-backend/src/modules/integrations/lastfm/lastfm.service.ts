@@ -1,6 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../../settings/settings.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import axios from 'axios';
 
 @Injectable()
@@ -11,6 +13,7 @@ export class LastFmService implements OnModuleInit {
   constructor(
     private configService: ConfigService,
     private settingsService: SettingsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async onModuleInit() {
@@ -37,6 +40,10 @@ export class LastFmService implements OnModuleInit {
   }
 
   async getRecentTrack() {
+    const cacheKey = 'lastfm_recent_track';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     const apiKey = await this.getApiKey();
     const username = await this.getUsername();
 
@@ -56,7 +63,7 @@ export class LastFmService implements OnModuleInit {
       const track = data?.recenttracks?.track?.[0];
       if (!track) return null;
 
-      return {
+      const result = {
         name: track.name,
         artist: track.artist['#text'],
         album: track.album['#text'],
@@ -66,6 +73,11 @@ export class LastFmService implements OnModuleInit {
         url: track.url,
         isNowPlaying: !!track['@attr']?.nowplaying,
       };
+
+      // Cache for 30 seconds
+      await this.cacheManager.set(cacheKey, result, 30);
+
+      return result;
     } catch (error) {
       this.logger.error('Failed to fetch Last.fm data', error);
       return null;

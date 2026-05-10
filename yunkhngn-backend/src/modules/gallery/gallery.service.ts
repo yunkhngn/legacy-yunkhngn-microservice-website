@@ -3,6 +3,8 @@ import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { IGalleryRepository } from './domain/gallery.repository.interface';
 import { Gallery } from './domain/gallery.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class GalleryService {
@@ -12,11 +14,15 @@ export class GalleryService {
     @Inject(IGalleryRepository)
     private readonly galleryRepository: IGalleryRepository,
     private readonly cloudinaryService: CloudinaryService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createGalleryDto: CreateGalleryDto): Promise<Gallery> {
     this.logger.log('Adding new photo to gallery');
-    return this.galleryRepository.create(createGalleryDto);
+    const result = await this.galleryRepository.create(createGalleryDto);
+    await this.cacheManager.del('admin_dashboard_stats');
+    await this.cacheManager.del('gallery_tags');
+    return result;
   }
 
   async findAll(query?: {
@@ -86,7 +92,10 @@ export class GalleryService {
     },
   ): Promise<Gallery> {
     this.logger.log(`Updating photo ID: ${id}`);
-    return this.galleryRepository.update(id, data);
+    const result = await this.galleryRepository.update(id, data);
+    await this.cacheManager.del('admin_dashboard_stats');
+    await this.cacheManager.del('gallery_tags');
+    return result;
   }
 
   async remove(id: string): Promise<Gallery> {
@@ -98,12 +107,15 @@ export class GalleryService {
       void this.cloudinaryService.deleteImagesSafely([photo.imageUrl]);
     }
 
+    await this.cacheManager.del('admin_dashboard_stats');
+    await this.cacheManager.del('gallery_tags');
     return photo;
   }
 
   async reorder(items: { id: string; sortOrder: number }[]) {
     this.logger.log(`Reordering ${items.length} photos`);
     await this.galleryRepository.reorder(items);
+    await this.cacheManager.del('admin_dashboard_stats');
     return { updated: items.length };
   }
 
@@ -117,6 +129,8 @@ export class GalleryService {
   ) {
     this.logger.log(`Bulk updating ${ids.length} photos`);
     const count = await this.galleryRepository.bulkUpdate(ids, data);
+    await this.cacheManager.del('admin_dashboard_stats');
+    await this.cacheManager.del('gallery_tags');
     return { updated: count };
   }
 

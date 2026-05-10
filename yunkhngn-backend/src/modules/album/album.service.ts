@@ -8,6 +8,8 @@ import {
 import { IAlbumRepository } from './domain/album.repository.interface';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Album } from './domain/album.entity';
 
 @Injectable()
@@ -17,6 +19,7 @@ export class AlbumService {
   constructor(
     @Inject(IAlbumRepository)
     private readonly albumRepository: IAlbumRepository,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   private generateSlug(name: string): string {
@@ -35,12 +38,14 @@ export class AlbumService {
     }
 
     this.logger.log(`Creating new album: ${dto.name}`);
-    return this.albumRepository.create({
+    const result = await this.albumRepository.create({
       name: dto.name,
       slug,
       description: dto.description,
       coverPhotoId: dto.coverPhotoId,
     });
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 
   async findAll(): Promise<Album[]> {
@@ -71,10 +76,12 @@ export class AlbumService {
     }
 
     this.logger.log(`Updating album ID: ${id}`);
-    return this.albumRepository.update(id, {
+    const result = await this.albumRepository.update(id, {
       ...dto,
       slug: dto.slug || (dto.name ? this.generateSlug(dto.name) : undefined),
     });
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 
   async remove(id: string): Promise<Album> {
@@ -87,6 +94,8 @@ export class AlbumService {
     // Unassign photos from this album first
     await this.albumRepository.unassignPhotos(id);
 
-    return this.albumRepository.delete(id);
+    const result = await this.albumRepository.delete(id);
+    await this.cacheManager.del('admin_dashboard_stats');
+    return result;
   }
 }

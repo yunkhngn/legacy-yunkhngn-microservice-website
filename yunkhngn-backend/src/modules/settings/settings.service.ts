@@ -11,6 +11,8 @@ import { EncryptionService } from '../../common/encryption.service';
 import { ISettingsRepository } from './domain/settings.repository.interface';
 import { Setting } from './domain/setting.entity';
 import { AiService } from '../ai/ai.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 const SYSTEM_SETTINGS_MAP: Record<
   string,
@@ -129,6 +131,7 @@ export class SettingsService implements OnModuleInit {
     private readonly encryptionService: EncryptionService,
     @Inject(forwardRef(() => AiService))
     private readonly aiService: AiService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.logger = new Logger(SettingsService.name);
   }
@@ -302,6 +305,7 @@ export class SettingsService implements OnModuleInit {
     const isPublic = updateSettingsDto.isPublic ?? existing?.isPublic ?? false;
 
     this.logger.log(`Updating setting: ${settingTitle}`);
+    await this.cacheManager.del('public_settings');
 
     // If content is undefined (masked sensitive), only update metadata without touching content
     if (content === undefined) {

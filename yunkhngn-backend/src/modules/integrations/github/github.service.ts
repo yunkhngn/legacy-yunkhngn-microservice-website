@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../../settings/settings.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 /** Minimal surface used by this service (Octokit instance). */
 type OctokitClient = {
@@ -42,6 +44,7 @@ export class GithubService {
   constructor(
     private configService: ConfigService,
     private settingsService: SettingsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   private async resolveToken(): Promise<string> {
@@ -97,6 +100,10 @@ export class GithubService {
   }
 
   async getPublicRepos() {
+    const cacheKey = 'github_public_repos';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     const username = await this.getUsername();
     if (!username) {
       this.logger.warn(
@@ -117,7 +124,9 @@ export class GithubService {
 
     try {
       const { data } = await listPublicRepos(octokit);
-      return Array.isArray(data) ? data : [];
+      const result = Array.isArray(data) ? data : [];
+      await this.cacheManager.set(cacheKey, result, 120);
+      return result;
     } catch (error: unknown) {
       const status =
         error && typeof error === 'object' && 'status' in error
@@ -132,7 +141,9 @@ export class GithubService {
           const { Octokit } = await eval('import("octokit")');
           const anon = new Octokit() as OctokitClient;
           const { data } = await listPublicRepos(anon);
-          return Array.isArray(data) ? data : [];
+          const result = Array.isArray(data) ? data : [];
+          await this.cacheManager.set(cacheKey, result, 120);
+          return result;
         } catch (fallbackErr) {
           this.logger.error(
             'Failed to fetch public repos (anonymous fallback)',
@@ -206,6 +217,10 @@ export class GithubService {
   }
 
   async getLatestActivity() {
+    const cacheKey = 'github_latest_activity';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     const username = await this.getUsername();
     if (!username) return null;
 
@@ -236,13 +251,16 @@ export class GithubService {
 
       const isPrivate = !relevantEvent.public;
 
-      return {
+      const result = {
         type: relevantEvent.type,
         repo: isPrivate ? 'Private Repository' : relevantEvent.repo.name,
         isPrivate,
         timestamp: relevantEvent.created_at,
         url: isPrivate ? null : `https://github.com/${relevantEvent.repo.name}`,
       };
+
+      await this.cacheManager.set(cacheKey, result, 60);
+      return result;
     } catch (error) {
       this.logger.error('Failed to fetch user events', error);
       return null;

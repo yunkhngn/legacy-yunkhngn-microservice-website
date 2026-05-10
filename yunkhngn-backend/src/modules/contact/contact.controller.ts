@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -14,6 +15,7 @@ import { ContactService } from './contact.service';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
 import { CreateContactDto } from './dto/create-contact.dto';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Contact')
 @Controller('contact')
@@ -29,6 +31,8 @@ export class ContactController {
 
   @Get()
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60)
   @ApiOperation({ summary: 'Get all contact messages' })
   @UseGuards(FirebaseAuthGuard)
   async getAllContacts() {

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ShortlinkService } from './shortlink.service';
@@ -14,6 +15,7 @@ import { CreateShortlinkDto } from './dto/create-shortlink.dto';
 import { UpdateShortlinkDto } from './dto/update-shortlink.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Shortlink')
 @Controller('shortlinks')
@@ -31,6 +33,8 @@ export class ShortlinkController {
 
   @Get()
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(120)
   @ApiOperation({ summary: 'Get all shortlinks (Admin only)' })
   @UseGuards(FirebaseAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -39,6 +43,8 @@ export class ShortlinkController {
   }
 
   @Get('resolve/:code')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300) // 5 minutes
   @ApiOperation({ summary: 'Resolve a shortlink code to its destination URL' })
   resolve(@Param('code') code: string) {
     return this.shortlinkService.resolve(code);

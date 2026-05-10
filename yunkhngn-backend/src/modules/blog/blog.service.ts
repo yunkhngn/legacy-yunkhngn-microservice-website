@@ -8,6 +8,8 @@ import { AiService } from '../ai/ai.service';
 import { Blog } from './domain/blog.entity';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class BlogService {
@@ -19,6 +21,7 @@ export class BlogService {
     private readonly configService: ConfigService,
     private readonly aiService: AiService,
     private readonly cloudinaryService: CloudinaryService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
@@ -37,6 +40,7 @@ export class BlogService {
     this.logger.log(`Creating blog with title: ${data.title}`);
 
     const newBlog = await this.blogRepository.create(data);
+    await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG if published
     if (newBlog.status === 'PUBLISHED') {
@@ -148,6 +152,7 @@ export class BlogService {
     }
 
     const updatedBlog = await this.blogRepository.update(id, data);
+    await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG if published
     if (updatedBlog.status === 'PUBLISHED') {
@@ -183,6 +188,7 @@ export class BlogService {
 
   async remove(id: string): Promise<Blog> {
     const blog = await this.blogRepository.delete(id);
+    await this.cacheManager.del('admin_dashboard_stats');
     if (blog) {
       await this.aiService.syncDocument('blog', id, '', {}, 'delete');
 
