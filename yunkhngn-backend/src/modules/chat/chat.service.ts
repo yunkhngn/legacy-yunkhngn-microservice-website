@@ -64,7 +64,7 @@ export class ChatService {
     userMessage: string,
     history: any[] = [],
     language: string = 'vi',
-  ): Promise<{ text: string; imageUrl?: string; sources?: any[] }> {
+  ): Promise<{ text: string; imageUrl?: string; tarotCards?: any[]; sources?: any[] }> {
     // 1. Validation
     const settings = await this.settingsService.findAll();
     const settingsMap = settings.reduce(

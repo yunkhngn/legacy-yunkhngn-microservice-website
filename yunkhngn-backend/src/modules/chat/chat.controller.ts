@@ -25,7 +25,7 @@ export class ChatController {
       body.message,
       history,
     );
-    return { response: result.text, imageUrl: result.imageUrl };
+    return { response: result.text, imageUrl: result.imageUrl, tarotCards: result.tarotCards || null };
   }
 
   @Post('external')
@@ -45,6 +45,6 @@ export class ChatController {
       body.message,
       history,
     );
-    return { response: result.text, imageUrl: result.imageUrl };
+    return { response: result.text, imageUrl: result.imageUrl, tarotCards: result.tarotCards || null };
   }
 }
