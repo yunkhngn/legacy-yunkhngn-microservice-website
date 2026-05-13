@@ -63,7 +63,7 @@ async def public_chat(
                 )
             except Exception as e:
                 logger.error(f"Failed to generate tarot analysis: {e}", exc_info=True)
-                analysis = f"DEBUG: Gemini analysis failed: {type(e).__name__}: {e}\n\nTớ đã rút được các lá bài cho cậu, nhưng hiện tại tớ không thể phân tích sâu hơn được. Cậu có thể tự xem ý nghĩa các lá bài bên dưới nhé!"
+                analysis = f"Tớ đã rút được các lá bài cho cậu, nhưng hiện tại tớ không thể phân tích sâu hơn được. Cậu có thể tự xem ý nghĩa các lá bài bên dưới nhé!"
 
             # Build tarot card data for frontend display with absolute URLs
             # Use rstrip/lstrip to ensure no double slashes or missing slashes
