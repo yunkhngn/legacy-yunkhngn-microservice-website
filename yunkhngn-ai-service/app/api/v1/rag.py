@@ -3,7 +3,7 @@ from typing import Optional
 import httpx
 import logging
 
-from app.schemas.rag import RAGSyncRequest, RAGReindexRequest
+from app.schemas.rag import RAGSyncRequest, RAGReindexRequest, RAGSimilarRequest
 from app.services.rag_service import rag_service
 from app.config import get_settings
 
@@ -69,3 +69,20 @@ async def reindex_all(
     url = request.backend_url or "http://backend:3001"
     background_tasks.add_task(perform_reindex, url, x_gemini_api_key)
     return {"status": "success", "message": "Reindexing started in background"}
+
+@router.post("/rag/similar")
+async def find_similar(
+    request: RAGSimilarRequest,
+    x_gemini_api_key: Optional[str] = Header(None)
+):
+    try:
+        results = await rag_service.find_similar(
+            doc_type=request.doc_type,
+            doc_id=request.doc_id,
+            top_k=request.top_k,
+            api_key=x_gemini_api_key
+        )
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.error(f"Error finding similar documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
