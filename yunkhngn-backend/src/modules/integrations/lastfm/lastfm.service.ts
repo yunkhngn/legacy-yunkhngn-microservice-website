@@ -5,6 +5,15 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import axios from 'axios';
 
+export interface LastFmTrack {
+  name: string;
+  artist: string;
+  album: string;
+  art?: string;
+  url: string;
+  isNowPlaying: boolean;
+}
+
 @Injectable()
 export class LastFmService implements OnModuleInit {
   private readonly logger = new Logger(LastFmService.name);
@@ -39,9 +48,10 @@ export class LastFmService implements OnModuleInit {
     );
   }
 
-  async getRecentTrack() {
+
+  async getRecentTrack(): Promise<LastFmTrack | null> {
     const cacheKey = 'lastfm_recent_track';
-    const cached = await this.cacheManager.get(cacheKey);
+    const cached = await this.cacheManager.get<LastFmTrack>(cacheKey);
     if (cached) return cached;
 
     const apiKey = await this.getApiKey();

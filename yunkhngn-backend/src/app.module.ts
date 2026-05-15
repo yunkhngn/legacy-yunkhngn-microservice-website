@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -103,7 +104,7 @@ import { HealthController } from './modules/health/health.controller';
     MonitorModule,
     ChatLogsModule,
     KnowledgeModule,
-
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController, HealthController],
   providers: [
@@ -130,4 +131,4 @@ import { HealthController } from './modules/health/health.controller';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
