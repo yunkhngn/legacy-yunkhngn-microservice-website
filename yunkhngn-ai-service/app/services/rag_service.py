@@ -154,7 +154,7 @@ class RAGService:
             logger.error(f"Error fetching document {chunk_id}: {e}")
             return []
         
-        if not existing["ids"] or not existing["embeddings"] or not existing["embeddings"][0]:
+        if not existing["ids"] or not existing["embeddings"] or existing["embeddings"][0] is None or len(existing["embeddings"][0]) == 0:
             logger.warning(f"Document {chunk_id} not found in ChromaDB")
             return []
         
