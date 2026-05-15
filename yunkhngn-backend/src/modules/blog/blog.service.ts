@@ -81,6 +81,37 @@ export class BlogService {
   }
 
   async findRelatedPosts(currentId: string, tags: string): Promise<Blog[]> {
+    // Try RAG-based semantic search first
+    try {
+      const ragResults = await this.aiService.findSimilar('blog', currentId, 2);
+      if (ragResults.length > 0) {
+        const ragBlogs: Blog[] = [];
+        for (const result of ragResults) {
+          const blog = await this.blogRepository.findById(result.doc_id);
+          if (blog && blog.status === 'PUBLISHED') {
+            ragBlogs.push(blog);
+          }
+        }
+        if (ragBlogs.length >= 2) {
+          return ragBlogs.slice(0, 2);
+        }
+        // If RAG returned some but not enough, fill with tag-based
+        if (ragBlogs.length > 0) {
+          const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
+          const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
+          const extra = await this.blogRepository.findRelated(
+            excludeIds,
+            tagList,
+            2 - ragBlogs.length,
+          );
+          return [...ragBlogs, ...extra];
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`RAG search failed, falling back to tag-based: ${error.message}`);
+    }
+
+    // Fallback: original tag-based logic
     let related: Blog[] = [];
     const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
 
