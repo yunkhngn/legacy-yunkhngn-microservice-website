@@ -344,3 +344,20 @@ model KnowledgeEntry {
   @@index([category])
   @@map("knowledge_entries")
 }
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String?
+  userId    String?
+  details   String?  @db.NVarChar(Max)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
