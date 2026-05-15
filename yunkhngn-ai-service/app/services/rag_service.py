@@ -136,6 +136,77 @@ class RAGService:
         # Return top_k after dedup
         return deduped[:top_k]
 
+    async def find_similar(self, doc_type: str, doc_id: str, top_k: int = 3, api_key: str | None = None) -> list[dict]:
+        """
+        Find documents similar to the given document by querying ChromaDB
+        with the existing embedding of that document.
+        """
+        # Step 1: Get the existing embedding(s) for this document
+        # We look for the first chunk (chunk_index=0) of this document
+        chunk_id = f"{doc_type}_{doc_id}_0"
+        
+        try:
+            existing = self.collection.get(
+                ids=[chunk_id],
+                include=["embeddings", "documents"]
+            )
+        except Exception as e:
+            logger.error(f"Error fetching document {chunk_id}: {e}")
+            return []
+        
+        if not existing["ids"] or not existing["embeddings"] or not existing["embeddings"][0]:
+            logger.warning(f"Document {chunk_id} not found in ChromaDB")
+            return []
+        
+        # Step 2: Query ChromaDB with this embedding to find similar documents
+        embedding = existing["embeddings"][0]
+        
+        # Fetch extra candidates to allow for dedup and self-exclusion
+        fetch_k = (top_k + 1) * 3
+        
+        results = self.collection.query(
+            query_embeddings=[embedding],
+            n_results=fetch_k,
+            where={"doc_type": doc_type}  # Only match same type (blog→blog, project→project)
+        )
+        
+        THRESHOLD = 1.4
+        
+        formatted_results = []
+        seen_doc_ids = set()
+        
+        if results['ids'] and len(results['ids']) > 0:
+            for i in range(len(results['ids'][0])):
+                metadata = results['metadatas'][0][i]
+                result_doc_id = metadata.get("doc_id", "")
+                distance = results['distances'][0][i] if 'distances' in results else 0
+                
+                # Skip self
+                if result_doc_id == doc_id:
+                    continue
+                
+                # Skip if over threshold
+                if distance > THRESHOLD:
+                    continue
+                
+                # Skip duplicates (different chunks from same document)
+                if result_doc_id in seen_doc_ids:
+                    continue
+                
+                seen_doc_ids.add(result_doc_id)
+                formatted_results.append({
+                    "doc_id": result_doc_id,
+                    "doc_type": metadata.get("doc_type", doc_type),
+                    "score": distance,
+                    "title": metadata.get("title", ""),
+                    "slug": metadata.get("slug", ""),
+                })
+                
+                if len(formatted_results) >= top_k:
+                    break
+        
+        return formatted_results
+
     @staticmethod
     def deduplicate_results(results: list[dict], max_per_doc: int = 2) -> list[dict]:
         """Limit chunks per document to ensure result diversity.
