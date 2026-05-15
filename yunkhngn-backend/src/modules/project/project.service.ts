@@ -75,12 +75,38 @@ export class ProjectService {
     return this.projectRepository.findAll(limit);
   }
 
-  async findOne(idOrSlug: string): Promise<Project | null> {
+  async findOne(idOrSlug: string): Promise<any> {
     let project = await this.projectRepository.findById(idOrSlug);
     if (!project) {
       project = await this.projectRepository.findBySlug(idOrSlug);
     }
-    return project;
+    if (!project) return null;
+
+    const relatedProjects = await this.findRelatedProjects(project.id);
+
+    return {
+      ...project,
+      relatedProjects,
+    };
+  }
+
+  async findRelatedProjects(currentId: string): Promise<Project[]> {
+    try {
+      const ragResults = await this.aiService.findSimilar('project', currentId, 3);
+      if (ragResults.length > 0) {
+        const projects: Project[] = [];
+        for (const result of ragResults) {
+          const proj = await this.projectRepository.findById(result.doc_id);
+          if (proj) {
+            projects.push(proj);
+          }
+        }
+        return projects;
+      }
+    } catch (error) {
+      this.logger.warn(`RAG search failed for project: ${error.message}`);
+    }
+    return [];
   }
 
   async update(
