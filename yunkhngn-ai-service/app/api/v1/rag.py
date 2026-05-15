@@ -47,15 +47,69 @@ async def get_rag_stats():
 
 async def perform_reindex(backend_url: str, api_key: str | None = None):
     try:
-        async with httpx.AsyncClient() as client:
-            # 1. Fetch Blogs
-            logger.info(f"Reindexing from {backend_url}...")
-            # We assume the BE has these endpoints available for internal use or via API key
-            # This is a simplified version
-            
-            # For now, we just log that we would do it
-            # In a real scenario, we'd loop through blogs, projects, etc.
-            pass
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # 1. Fetch and index Blogs
+            logger.info(f"Reindexing blogs from {backend_url}...")
+            try:
+                blogs_res = await client.get(f"{backend_url}/blogs")
+                if blogs_res.status_code == 200:
+                    blogs = blogs_res.json()
+                    if isinstance(blogs, dict) and "data" in blogs:
+                        blogs = blogs["data"]
+                    indexed = 0
+                    for blog in blogs:
+                        if blog.get("status") != "PUBLISHED":
+                            continue
+                        content = blog.get("contentJSON") or blog.get("content") or ""
+                        metadata = {
+                            "title": blog.get("title", ""),
+                            "slug": blog.get("slug", ""),
+                            "tags": blog.get("tags", ""),
+                        }
+                        await rag_service.index_document(
+                            doc_type="blog",
+                            doc_id=blog["id"],
+                            text=content,
+                            metadata=metadata,
+                            api_key=api_key,
+                        )
+                        indexed += 1
+                        import asyncio
+                        await asyncio.sleep(1)
+                    logger.info(f"Indexed {indexed} blogs")
+            except Exception as e:
+                logger.error(f"Error indexing blogs: {e}")
+
+            # 2. Fetch and index Projects
+            logger.info(f"Reindexing projects from {backend_url}...")
+            try:
+                projects_res = await client.get(f"{backend_url}/projects")
+                if projects_res.status_code == 200:
+                    projects = projects_res.json()
+                    if isinstance(projects, dict) and "data" in projects:
+                        projects = projects["data"]
+                    indexed = 0
+                    for project in projects:
+                        content = project.get("contentJSON") or project.get("description") or ""
+                        metadata = {
+                            "title": project.get("title", ""),
+                            "slug": project.get("slug", ""),
+                            "techStack": str(project.get("techStack", "")),
+                        }
+                        await rag_service.index_document(
+                            doc_type="project",
+                            doc_id=project["id"],
+                            text=content,
+                            metadata=metadata,
+                            api_key=api_key,
+                        )
+                        indexed += 1
+                        import asyncio
+                        await asyncio.sleep(1)
+                    logger.info(f"Indexed {indexed} projects")
+            except Exception as e:
+                logger.error(f"Error indexing projects: {e}")
+
     except Exception as e:
         logger.error(f"Error in reindex task: {e}")
 
