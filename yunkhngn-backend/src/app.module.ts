@@ -43,6 +43,7 @@ import { LetterModule } from './modules/letter/letter.module';
 import { MonitorModule } from './modules/monitor/monitor.module';
 import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -104,6 +105,7 @@ import { HealthController } from './modules/health/health.controller';
     MonitorModule,
     ChatLogsModule,
     KnowledgeModule,
+    AuditLogsModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController, HealthController],
