@@ -1,4 +1,36 @@
 # API Subdomain
 api.yunkhngn.dev {
+    # ── Security Headers ──
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        # Remove server info
+        -Server
+    }
+
+    # ── Block path traversal & common attack patterns ──
+    @blocked_paths {
+        path_regexp blocked (?i)(\.\.|\.\./|\.env|wp-admin|wp-login|wp-content|phpmyadmin|\.git|\.htaccess|etc/passwd|etc/shadow|proc/self|/debug|/actuator|/console)
+    }
+    respond @blocked_paths 403
+
+    # ── Block scanner user agents ──
+    @blocked_agents {
+        header_regexp User-Agent (?i)(nikto|sqlmap|nmap|dirsearch|gobuster|masscan|zgrab|nuclei|httpie|curl/|python-requests|go-http-client|java/|nessus|openvas|acunetix|burpsuite|wpscan|semrush|ahref)
+    }
+    respond @blocked_agents 403
+
+    # ── Rate limit ──
+    rate_limit {
+        zone api_zone {
+            key {remote_host}
+            events 60
+            window 1m
+        }
+    }
+
     reverse_proxy backend:3001
 }
