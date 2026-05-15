@@ -22,15 +22,5 @@ api.yunkhngn.dev {
         header_regexp User-Agent (?i)(nikto|sqlmap|nmap|dirsearch|gobuster|masscan|zgrab|nuclei|httpie|curl/|python-requests|go-http-client|java/|nessus|openvas|acunetix|burpsuite|wpscan|semrush|ahref)
     }
     respond @blocked_agents 403
-
-    # ── Rate limit ──
-    rate_limit {
-        zone api_zone {
-            key {remote_host}
-            events 60
-            window 1m
-        }
-    }
-
     reverse_proxy backend:3001
 }
