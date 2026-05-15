@@ -19,8 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "sync:rag": "ts-node src/scripts/sync-rag.ts",
-    "cleanup:accounts": "ts-node src/scripts/cleanup-firebase-accounts.ts",
-    "cleanup:accounts:dry": "ts-node src/scripts/cleanup-firebase-accounts.ts --dry-run"
+    "cleanup:accounts": "node dist/scripts/cleanup-firebase-accounts.js",
+    "cleanup:accounts:dry": "node dist/scripts/cleanup-firebase-accounts.js --dry-run"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",

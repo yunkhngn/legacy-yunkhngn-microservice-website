@@ -29,6 +29,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 ENV NODE_ENV production
+RUN corepack enable
 
 # Use non-root user for security
 RUN addgroup --system --gid 1001 nodejs
