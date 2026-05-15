@@ -158,6 +158,30 @@ export class AiService {
     }
   }
 
+  async findSimilar(
+    docType: string,
+    docId: string,
+    topK: number = 3,
+  ): Promise<{ doc_id: string; doc_type: string; score: number; title: string; slug: string }[]> {
+    try {
+      const data = await this.callAiService(
+        '/similar',
+        {
+          doc_type: docType,
+          doc_id: docId,
+          top_k: topK,
+        },
+        '/rag',
+      );
+      return data.results || [];
+    } catch (error) {
+      this.logger.error(
+        `Failed to find similar ${docType} for ${docId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
   async chatWithSystem(
     message: string,
     history: any[],
