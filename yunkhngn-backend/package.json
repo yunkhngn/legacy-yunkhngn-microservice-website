@@ -18,7 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "sync:rag": "ts-node src/scripts/sync-rag.ts"
+    "sync:rag": "ts-node src/scripts/sync-rag.ts",
+    "cleanup:accounts": "ts-node src/scripts/cleanup-firebase-accounts.ts",
+    "cleanup:accounts:dry": "ts-node src/scripts/cleanup-firebase-accounts.ts --dry-run"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
@@ -33,7 +35,6 @@
     "@nestjs/platform-socket.io": "^11.1.9",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/throttler": "^6.5.0",
-    "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.9",
     "@types/cache-manager": "^5.0.0",
     "axios": "^1.13.5",
@@ -55,8 +56,7 @@
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.1",
     "swagger-ui-express": "^5.0.1",
-    "systeminformation": "^5.30.7",
-    "typeorm": "^0.3.27"
+    "systeminformation": "^5.30.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
