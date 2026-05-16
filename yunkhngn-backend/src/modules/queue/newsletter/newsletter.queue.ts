@@ -18,17 +18,17 @@ const DEFAULT_OPTS = {
 export class NewsletterQueue {
   constructor(@InjectQueue(NEWSLETTER_QUEUE) private readonly queue: Queue) {}
 
-  async announce(blogId: string): Promise<void> {
-    const payload: AnnouncePayload = { blogId };
+  async announce(entityId: string, entityType: 'blog' | 'project' = 'blog'): Promise<void> {
+    const payload: AnnouncePayload = { entityId, entityType, blogId: entityId };
     await this.queue.add(NEWSLETTER_JOB_ANNOUNCE, payload, {
-      jobId: `announce-${blogId}`,
+      jobId: `announce-${entityType}-${entityId}`,
       ...DEFAULT_OPTS,
     });
   }
 
   async send(payload: SendPayload): Promise<void> {
     await this.queue.add(NEWSLETTER_JOB_SEND, payload, {
-      jobId: `send-${payload.blogId}-${payload.subscriberId}`,
+      jobId: `send-${payload.entityType}-${payload.entityId}-${payload.subscriberId}`,
       ...DEFAULT_OPTS,
     });
   }

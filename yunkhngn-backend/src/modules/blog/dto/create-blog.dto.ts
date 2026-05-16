@@ -51,4 +51,8 @@ export class CreateBlogDto {
   @IsString()
   @IsOptional()
   imageSettings?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  sendNewsletter?: boolean;
 }

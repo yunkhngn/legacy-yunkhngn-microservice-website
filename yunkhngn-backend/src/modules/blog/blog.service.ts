@@ -60,9 +60,12 @@ export class BlogService {
       });
 
       this.logger.log(
-        `New blog published: ${newBlog.title}. Sending newsletter...`,
+        `New blog published: ${newBlog.title}.`
       );
-      await this.newsletterQueue.announce(newBlog.id);
+      if (createBlogDto.sendNewsletter) {
+        this.logger.log(`Sending newsletter...`);
+        await this.newsletterQueue.announce(newBlog.id, 'blog');
+      }
     }
 
     await this.auditLogsService.log({
@@ -157,6 +160,9 @@ export class BlogService {
       data.seoDescription = data.seoDescription || data.excerpt;
       delete data.excerpt;
     }
+    if (data.sendNewsletter !== undefined) {
+      delete data.sendNewsletter;
+    }
     delete data.id;
     delete data.createdAt;
     delete data.updatedAt;
@@ -204,11 +210,13 @@ export class BlogService {
     const wasPublished = currentBlog.status === 'PUBLISHED';
     const isNowPublished = updatedBlog.status === 'PUBLISHED';
 
-    if (!wasPublished && isNowPublished) {
-      this.logger.log(
-        `Blog ${updatedBlog.title} just got PUBLISHED! Sending newsletter...`,
-      );
-      await this.newsletterQueue.announce(updatedBlog.id);
+    if ((!wasPublished && isNowPublished) || updateBlogDto.sendNewsletter) {
+      if (updateBlogDto.sendNewsletter !== false) {
+        this.logger.log(
+          `Blog ${updatedBlog.title} published or requested newsletter. Sending...`,
+        );
+        await this.newsletterQueue.announce(updatedBlog.id, 'blog');
+      }
     }
 
     // --- NEW: Trigger async deletion ---

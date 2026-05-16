@@ -71,4 +71,8 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   seoImage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  sendNewsletter?: boolean;
 }
