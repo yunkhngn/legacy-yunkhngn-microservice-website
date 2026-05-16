@@ -156,6 +156,11 @@ export class NewsletterService {
     return this.repository.findAll();
   }
 
+  async deleteSubscriber(id: string) {
+    await this.repository.delete(id);
+    return { message: 'Successfully deleted subscriber' };
+  }
+
   // Kept for backwards compatibility with blog.service.ts until Task 12 replaces it.
   async sendToAll(subject: string, content: string) {
     const subscribers = await this.repository.findAll();
