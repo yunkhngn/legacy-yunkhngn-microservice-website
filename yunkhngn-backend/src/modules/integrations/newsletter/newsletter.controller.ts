@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, UseGuards, Delete, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -44,5 +44,21 @@ export class NewsletterController {
   @UseGuards(FirebaseAuthGuard)
   async send(@Body() body: { subject: string; content: string }) {
     return this.newsletterService.sendToAll(body.subject, body.content);
+  }
+
+  @Get('subscribers')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all subscribers' })
+  @UseGuards(FirebaseAuthGuard)
+  async getSubscribers() {
+    return this.newsletterService.findAllSubscribers();
+  }
+
+  @Delete('subscribers/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a subscriber' })
+  @UseGuards(FirebaseAuthGuard)
+  async deleteSubscriber(@Param('id') id: string) {
+    return this.newsletterService.deleteSubscriber(id);
   }
 }
