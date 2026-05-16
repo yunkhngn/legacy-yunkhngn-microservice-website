@@ -13,3 +13,5 @@ export interface SendPayload {
   email: string;
   token: string;
 }
+
+export type NewsletterJob = AnnouncePayload | SendPayload;
