@@ -4,6 +4,8 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { Project } from './domain/project.entity';
 import { AiService } from '../ai/ai.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -17,6 +19,7 @@ export class ProjectService {
     @Inject(IProjectRepository)
     private readonly projectRepository: IProjectRepository,
     private readonly aiService: AiService,
+    private readonly auditLogsService: AuditLogsService,
     private readonly cloudinaryService: CloudinaryService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
@@ -68,6 +71,13 @@ export class ProjectService {
       },
     );
 
+    await this.auditLogsService.log({
+      action: AuditAction.CREATE_PROJECT,
+      entity: AuditEntity.PROJECT,
+      entityId: project.id,
+      details: { title: project.title, slug: project.slug },
+    });
+
     return project;
   }
 
@@ -92,7 +102,11 @@ export class ProjectService {
 
   async findRelatedProjects(currentId: string): Promise<Project[]> {
     try {
-      const ragResults = await this.aiService.findSimilar('project', currentId, 3);
+      const ragResults = await this.aiService.findSimilar(
+        'project',
+        currentId,
+        3,
+      );
       if (ragResults.length > 0) {
         const projects: Project[] = [];
         for (const result of ragResults) {
@@ -167,6 +181,13 @@ export class ProjectService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    await this.auditLogsService.log({
+      action: AuditAction.UPDATE_PROJECT,
+      entity: AuditEntity.PROJECT,
+      entityId: id,
+      details: { title: project.title, slug: project.slug },
+    });
+
     return project;
   }
 
@@ -174,17 +195,26 @@ export class ProjectService {
     this.logger.log(`Removing project ID: ${id}`);
     const project = await this.projectRepository.delete(id);
     await this.cacheManager.del('admin_dashboard_stats');
-    if (project) {
-      await this.aiService.syncDocument('project', id, '', {}, 'delete');
-
-      // Cleanup all associated Cloudinary images
-      const imagesToDelete = [
-        project.cover,
-        project.seoImage,
-        ...extractImagesFromJsonContent(project.contentJSON),
-      ];
-      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    if (!project) {
+      return project;
     }
+
+    await this.aiService.syncDocument('project', id, '', {}, 'delete');
+
+    const imagesToDelete = [
+      project.cover,
+      project.seoImage,
+      ...extractImagesFromJsonContent(project.contentJSON),
+    ];
+    void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+
+    await this.auditLogsService.log({
+      action: AuditAction.DELETE_PROJECT,
+      entity: AuditEntity.PROJECT,
+      entityId: id,
+      details: { title: project.title, slug: project.slug },
+    });
+
     return project;
   }
 }
