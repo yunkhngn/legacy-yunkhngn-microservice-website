@@ -23,8 +23,11 @@
     "cleanup:accounts:dry": "node dist/scripts/cleanup-firebase-accounts.js --dry-run"
   },
   "dependencies": {
+    "@bull-board/api": "^7.1.5",
+    "@bull-board/express": "^7.1.5",
     "@google/genai": "^1.41.0",
     "@google/generative-ai": "^0.24.1",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -40,6 +43,7 @@
     "@types/cache-manager": "^5.0.0",
     "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
+    "bullmq": "^5.76.8",
     "cache-manager": "^7.2.8",
     "cache-manager-redis-store": "^2.0.0",
     "class-transformer": "^0.5.1",

@@ -1,9 +1,7 @@
 import { Injectable, Inject, ConflictException, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { IBlogRepository } from './domain/blog.repository.interface';
-import { NewsletterService } from '../integrations/newsletter/newsletter.service';
 import { AiService } from '../ai/ai.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
@@ -12,6 +10,8 @@ import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { RagSyncQueue } from '../queue/rag-sync/rag-sync.queue';
+import { NewsletterQueue } from '../queue/newsletter/newsletter.queue';
 
 @Injectable()
 export class BlogService {
@@ -19,12 +19,12 @@ export class BlogService {
 
   constructor(
     @Inject(IBlogRepository) private readonly blogRepository: IBlogRepository,
-    private readonly newsletterService: NewsletterService,
-    private readonly configService: ConfigService,
     private readonly aiService: AiService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly auditLogsService: AuditLogsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly ragSyncQueue: RagSyncQueue,
+    private readonly newsletterQueue: NewsletterQueue,
   ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
@@ -47,21 +47,22 @@ export class BlogService {
 
     // Sync to RAG if published
     if (newBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument(
-        'blog',
-        newBlog.id,
-        newBlog.contentJSON || '',
-        {
+      await this.ragSyncQueue.enqueue({
+        op: 'upsert',
+        type: 'blog',
+        docId: newBlog.id,
+        content: newBlog.contentJSON || '',
+        metadata: {
           title: newBlog.title,
           slug: newBlog.slug,
           tags: newBlog.tags,
         },
-      );
+      });
 
       this.logger.log(
         `New blog published: ${newBlog.title}. Sending newsletter...`,
       );
-      await this.sendNewsletterForBlog(newBlog);
+      await this.newsletterQueue.announce(newBlog.id);
     }
 
     await this.auditLogsService.log({
@@ -91,21 +92,15 @@ export class BlogService {
   }
 
   async findRelatedPosts(currentId: string, tags: string): Promise<Blog[]> {
-    // Try RAG-based semantic search first
     try {
       const ragResults = await this.aiService.findSimilar('blog', currentId, 2);
       if (ragResults.length > 0) {
-        const ragBlogs: Blog[] = [];
-        for (const result of ragResults) {
-          const blog = await this.blogRepository.findById(result.doc_id);
-          if (blog && blog.status === 'PUBLISHED') {
-            ragBlogs.push(blog);
-          }
-        }
+        const ids = ragResults.map((r) => r.doc_id);
+        const byId = await this.blogRepository.findManyByIds(ids);
+        const ragBlogs = byId.filter((b) => b.status === 'PUBLISHED');
         if (ragBlogs.length >= 2) {
           return ragBlogs.slice(0, 2);
         }
-        // If RAG returned some but not enough, fill with tag-based
         if (ragBlogs.length > 0) {
           const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
           const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
@@ -119,22 +114,17 @@ export class BlogService {
       }
     } catch (error) {
       this.logger.warn(
-        `RAG search failed, falling back to tag-based: ${error.message}`,
+        `RAG search failed, falling back to tag-based: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
-    // Fallback: original tag-based logic
     let related: Blog[] = [];
     const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
-
     if (tagList.length > 0) {
       related = await this.blogRepository.findRelated([currentId], tagList, 2);
     }
-
     if (related.length < 2) {
       const excludeIds = [currentId, ...related.map((b) => b.id)];
-      // Note: This logic could be moved to repository if it gets complex
-      // For now, we'll just use what we have or add findRecent to repository
       const recent = await this.blogRepository.findRelated(
         excludeIds,
         [],
@@ -142,7 +132,6 @@ export class BlogService {
       );
       related = [...related, ...recent];
     }
-
     return related;
   }
 
@@ -199,16 +188,17 @@ export class BlogService {
 
     // Sync to RAG if published
     if (updatedBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument(
-        'blog',
-        updatedBlog.id,
-        updatedBlog.contentJSON || '',
-        {
+      await this.ragSyncQueue.enqueue({
+        op: 'upsert',
+        type: 'blog',
+        docId: updatedBlog.id,
+        content: updatedBlog.contentJSON || '',
+        metadata: {
           title: updatedBlog.title,
           slug: updatedBlog.slug,
           tags: updatedBlog.tags,
         },
-      );
+      });
     }
 
     const wasPublished = currentBlog.status === 'PUBLISHED';
@@ -218,7 +208,7 @@ export class BlogService {
       this.logger.log(
         `Blog ${updatedBlog.title} just got PUBLISHED! Sending newsletter...`,
       );
-      await this.sendNewsletterForBlog(updatedBlog);
+      await this.newsletterQueue.announce(updatedBlog.id);
     }
 
     // --- NEW: Trigger async deletion ---
@@ -243,7 +233,7 @@ export class BlogService {
       return blog;
     }
 
-    await this.aiService.syncDocument('blog', id, '', {}, 'delete');
+    await this.ragSyncQueue.enqueue({ op: 'delete', type: 'blog', docId: id });
 
     const imagesToDelete = [
       blog.thumbnail,
@@ -269,51 +259,4 @@ export class BlogService {
     return this.blogRepository.incrementViews(blog.id);
   }
 
-  private async sendNewsletterForBlog(blog: Blog) {
-    try {
-      const subject = `New Post: ${blog.title}`;
-      const frontendUrl =
-        this.configService.get<string>('app.frontendUrl') ||
-        'http://localhost:3000';
-      const blogUrl = `${frontendUrl.replace(/\/$/, '')}/blog/${blog.slug}`;
-      const description = blog.seoDescription || 'Click to read full post...';
-      const truncatedDescription =
-        description.length > 200
-          ? `${description.substring(0, 197)}...`
-          : description;
-
-      const content = `
-          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-            ${
-              blog.thumbnail
-                ? `<div style="width: 100%; height: 200px; background-image: url('${blog.thumbnail}'); background-size: cover; background-position: center;"></div>`
-                : ''
-            }
-            <div style="padding: 30px;">
-              <h2 style="color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 0;">New Blog Post</h2>
-              <h1 style="font-size: 24px; font-weight: 700; margin: 10px 0 15px; line-height: 1.3;">
-                <a href="${blogUrl}" style="text-decoration: none; color: #1a1a1a;">${blog.title}</a>
-              </h1>
-              <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-                ${truncatedDescription}
-              </p>
-              <div style="text-align: center;">
-                <a href="${blogUrl}" style="display: inline-block; background-color: #000; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">Read Full Story</a>
-              </div>
-            </div>
-            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee;">
-              <p style="margin: 0;">You received this email because you subscribed to yunkhngn.dev.</p>
-            </div>
-          </div>
-      `;
-
-      await this.newsletterService.sendToAll(subject, content);
-      this.logger.log(`Newsletter sent for blog: ${blog.title}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send newsletter for blog: ${blog.title}`,
-        error.stack,
-      );
-    }
-  }
 }

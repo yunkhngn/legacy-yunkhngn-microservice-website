@@ -41,6 +41,17 @@ export class PrismaBlogRepository implements IBlogRepository {
     });
   }
 
+  async findManyByIds(ids: string[]): Promise<Blog[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.blog.findMany({
+      where: { id: { in: ids } },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r as Blog]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((b): b is Blog => Boolean(b));
+  }
+
   findRelated(
     excludeIds: string[],
     tags: string[],
