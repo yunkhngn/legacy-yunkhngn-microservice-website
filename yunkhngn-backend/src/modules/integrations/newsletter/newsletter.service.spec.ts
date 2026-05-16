@@ -76,7 +76,6 @@ describe('NewsletterService - rendering & sendOne', () => {
   });
 
   it('sendOne calls emailService.sendNewsletter with subscriber-specific unsubscribe link', async () => {
-    repository.findByEmail.mockResolvedValue({ email: 'a@b.com', token: 'tok-1', id: '1', createdAt: new Date() });
     await service.sendOne(
       {
         title: 'Hi',
@@ -84,7 +83,7 @@ describe('NewsletterService - rendering & sendOne', () => {
         seoDescription: '',
         thumbnail: null,
       } as any,
-      'a@b.com',
+      { email: 'a@b.com', token: 'tok-1' },
     );
     expect(emailService.sendNewsletter).toHaveBeenCalledWith(
       'a@b.com',

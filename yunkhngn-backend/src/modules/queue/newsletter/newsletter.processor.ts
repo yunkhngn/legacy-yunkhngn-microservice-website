@@ -42,8 +42,7 @@ export class NewsletterProcessor extends WorkerHost {
       );
       return;
     }
-    const subscribers: Array<{ id: string; email: string; token: string }> =
-      await (this.newsletterService as any).findAllSubscribers();
+    const subscribers = await this.newsletterService.findAllSubscribers();
     this.logger.log(
       `[${job.id}] fanning out ${subscribers.length} send jobs for blog ${blog.id}`,
     );
@@ -64,7 +63,7 @@ export class NewsletterProcessor extends WorkerHost {
         `Blog ${payload.blogId} not found when sending newsletter`,
       );
     }
-    await (this.newsletterService as any).sendOne(blog, {
+    await this.newsletterService.sendOne(blog as any, {
       email: payload.email,
       token: payload.token,
     });

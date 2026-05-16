@@ -10,6 +10,11 @@ export interface NewsletterBlog {
   thumbnail?: string | null;
 }
 
+export interface NewsletterSubscriber {
+  email: string;
+  token: string;
+}
+
 @Injectable()
 export class NewsletterService {
   private readonly logger = new Logger(NewsletterService.name);
@@ -81,18 +86,19 @@ export class NewsletterService {
     return { subject: `New Post: ${blog.title}`, content };
   }
 
-  async sendOne(blog: NewsletterBlog, email: string): Promise<void> {
+  async sendOne(blog: NewsletterBlog, subscriber: NewsletterSubscriber) {
     const { subject, content } = this.renderBlogEmail(blog);
-    const subscriber = await this.repository.findByEmail(email);
-    const unsubscribeLink = subscriber?.token
-      ? this.unsubscribeUrl(subscriber.token)
-      : `${this.frontendUrl()}/newsletter/unsubscribe`;
-    await this.emailService.sendNewsletter(email, subject, content, unsubscribeLink);
+    const unsubscribeLink = this.unsubscribeUrl(subscriber.token);
+    return this.emailService.sendNewsletter(
+      subscriber.email,
+      subject,
+      content,
+      unsubscribeLink,
+    );
   }
 
-  async findAllSubscribers(): Promise<string[]> {
-    const subscribers = await this.repository.findAll();
-    return subscribers.map((s) => s.email);
+  async findAllSubscribers() {
+    return this.repository.findAll();
   }
 
   // Kept for backwards compatibility with blog.service.ts until Task 12 replaces it.
