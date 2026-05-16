@@ -1,6 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AiModule } from '../ai/ai.module';
+import { RagSyncQueue } from './rag-sync/rag-sync.queue';
+import { RagSyncProcessor } from './rag-sync/rag-sync.processor';
 
 @Global()
 @Module({
@@ -21,7 +24,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
     BullModule.registerQueue({ name: 'newsletter' }),
     BullModule.registerQueue({ name: 'rag-sync' }),
+    AiModule,
   ],
-  exports: [BullModule],
+  providers: [RagSyncQueue, RagSyncProcessor],
+  exports: [BullModule, RagSyncQueue],
 })
 export class QueueModule {}
