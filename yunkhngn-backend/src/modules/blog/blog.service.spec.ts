@@ -128,6 +128,31 @@ describe('BlogService', () => {
 
       expect(await service.findAll()).toEqual(result);
     });
+
+    it('should pass status to repository when provided', async () => {
+      const result = [
+        {
+          id: '1',
+          title: 'Test',
+          slug: 'test',
+          contentJSON: '{}',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          status: 'PUBLISHED',
+          thumbnail: null,
+          tags: null,
+          seoTitle: null,
+          seoDescription: null,
+          seoImage: null,
+          imageSettings: null,
+          views: 0,
+        },
+      ];
+      repository.findAll.mockResolvedValue(result);
+
+      expect(await service.findAll(6, 'PUBLISHED')).toEqual(result);
+      expect(repository.findAll).toHaveBeenCalledWith(6, 'PUBLISHED');
+    });
   });
 
   describe('findOne', () => {
