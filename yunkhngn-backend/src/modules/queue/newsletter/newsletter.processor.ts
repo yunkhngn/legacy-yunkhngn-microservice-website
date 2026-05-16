@@ -59,6 +59,7 @@ export class NewsletterProcessor extends WorkerHost {
   private async handleSend(payload: SendPayload, job: Job) {
     const blog = await this.blogRepository.findById(payload.blogId);
     if (!blog) {
+      // Throwing makes BullMQ retry; final failure lands in `failed` state.
       throw new Error(
         `Blog ${payload.blogId} not found when sending newsletter`,
       );
