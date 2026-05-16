@@ -11,6 +11,7 @@ import { extractImagesFromJsonContent } from '../../common/utils/image-extractor
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { RagSyncQueue } from '../queue/rag-sync/rag-sync.queue';
+import { NewsletterQueue } from '../queue/newsletter/newsletter.queue';
 
 @Injectable()
 export class ProjectService {
@@ -24,6 +25,7 @@ export class ProjectService {
     private readonly cloudinaryService: CloudinaryService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly ragSyncQueue: RagSyncQueue,
+    private readonly newsletterQueue: NewsletterQueue,
   ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
@@ -42,6 +44,9 @@ export class ProjectService {
         // ignore invalid json
       }
       delete data.images;
+    }
+    if (data.sendNewsletter !== undefined) {
+      delete data.sendNewsletter;
     }
     delete data.id;
     delete data.createdAt;
@@ -73,6 +78,13 @@ export class ProjectService {
         techStack: project.techStack,
       },
     });
+
+    if (createProjectDto.sendNewsletter) {
+      this.logger.log(
+        `Project created with sendNewsletter flag. Announcing ${project.title}...`,
+      );
+      await this.newsletterQueue.announce(project.id, 'project');
+    }
 
     await this.auditLogsService.log({
       action: AuditAction.CREATE_PROJECT,
@@ -238,6 +250,13 @@ export class ProjectService {
         techStack: project.techStack,
       },
     });
+
+    if (updateProjectDto.sendNewsletter) {
+      this.logger.log(
+        `Project updated with sendNewsletter flag. Announcing ${project.title}...`,
+      );
+      await this.newsletterQueue.announce(project.id, 'project');
+    }
 
     if (imagesToDelete.length > 0) {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
