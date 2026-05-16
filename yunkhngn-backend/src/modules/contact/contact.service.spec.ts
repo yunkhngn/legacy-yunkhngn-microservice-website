@@ -4,6 +4,7 @@ import { IContactRepository } from './domain/contact.repository.interface';
 import { EmailService } from '../integrations/email/email.service';
 import { AiService } from '../ai/ai.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('ContactService', () => {
   let service: ContactService;
@@ -40,6 +41,7 @@ describe('ContactService', () => {
         { provide: EmailService, useValue: mockEmailService },
         { provide: AiService, useValue: mockAiService },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
       ],
     }).compile();
 

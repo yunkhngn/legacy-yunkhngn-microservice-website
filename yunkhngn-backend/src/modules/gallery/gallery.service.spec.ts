@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GalleryService } from './gallery.service';
 import { IGalleryRepository } from './domain/gallery.repository.interface';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 const mockGalleryRepository = {
   create: jest.fn(),
@@ -31,6 +32,7 @@ describe('GalleryService', () => {
         GalleryService,
         { provide: IGalleryRepository, useValue: mockGalleryRepository },
         { provide: CloudinaryService, useValue: mockCloudinaryService },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
       ],
     }).compile();
 

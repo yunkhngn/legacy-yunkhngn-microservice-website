@@ -3,6 +3,7 @@ import { GithubService } from './github.service';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../../settings/settings.service';
 import { Logger } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('GithubService', () => {
   let service: GithubService;
@@ -40,6 +41,7 @@ describe('GithubService', () => {
           useValue: mockConfigService,
         },
         { provide: SettingsService, useValue: mockSettingsService },
+        { provide: CACHE_MANAGER, useValue: { get: jest.fn(), set: jest.fn() } },
       ],
     }).compile();
 
