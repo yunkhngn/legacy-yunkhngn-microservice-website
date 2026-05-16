@@ -2,8 +2,12 @@ import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AiModule } from '../ai/ai.module';
+import { BlogModule } from '../blog/blog.module';
+import { NewsletterModule } from '../integrations/newsletter/newsletter.module';
 import { RagSyncQueue } from './rag-sync/rag-sync.queue';
 import { RagSyncProcessor } from './rag-sync/rag-sync.processor';
+import { NewsletterQueue } from './newsletter/newsletter.queue';
+import { NewsletterProcessor } from './newsletter/newsletter.processor';
 
 @Global()
 @Module({
@@ -25,8 +29,15 @@ import { RagSyncProcessor } from './rag-sync/rag-sync.processor';
     BullModule.registerQueue({ name: 'newsletter' }),
     BullModule.registerQueue({ name: 'rag-sync' }),
     AiModule,
+    BlogModule,
+    NewsletterModule,
   ],
-  providers: [RagSyncQueue, RagSyncProcessor],
-  exports: [BullModule, RagSyncQueue],
+  providers: [
+    RagSyncQueue,
+    RagSyncProcessor,
+    NewsletterQueue,
+    NewsletterProcessor,
+  ],
+  exports: [BullModule, RagSyncQueue, NewsletterQueue],
 })
 export class QueueModule {}
