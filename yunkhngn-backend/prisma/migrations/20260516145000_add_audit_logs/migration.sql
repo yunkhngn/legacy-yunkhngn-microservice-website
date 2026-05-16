@@ -1,7 +1,3 @@
-
-> be@0.0.1 npx
-> prisma migrate diff --from-schema-datamodel prisma/schema.old.prisma --to-schema-datamodel prisma/schema.prisma --script
-
 BEGIN TRY
 
 BEGIN TRAN;
@@ -41,4 +37,3 @@ END;
 THROW
 
 END CATCH
-
