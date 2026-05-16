@@ -1,6 +1,6 @@
 import { Inject, Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { NewsletterService } from '../../integrations/newsletter/newsletter.service';
 import { NewsletterQueue } from './newsletter.queue';
 import { IBlogRepository } from '../../blog/domain/blog.repository.interface';
@@ -59,10 +59,15 @@ export class NewsletterProcessor extends WorkerHost {
   private async handleSend(payload: SendPayload, job: Job) {
     const blog = await this.blogRepository.findById(payload.blogId);
     if (!blog) {
-      // Throwing makes BullMQ retry; final failure lands in `failed` state.
-      throw new Error(
+      throw new UnrecoverableError(
         `Blog ${payload.blogId} not found when sending newsletter`,
       );
+    }
+    if (blog.status !== 'PUBLISHED') {
+      this.logger.warn(
+        `[${job.id}] send skipped — blog ${payload.blogId} is not PUBLISHED`,
+      );
+      return;
     }
     await this.newsletterService.sendOne(blog as any, {
       email: payload.email,
