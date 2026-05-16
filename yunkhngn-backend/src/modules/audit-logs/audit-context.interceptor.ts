@@ -12,7 +12,7 @@ export class AuditContextInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest();
     const actor: AuditActor = {
-      userId: req?.user?.uid ?? req?.user?.id,
+      userId: req?.user?.email ?? req?.user?.uid ?? req?.user?.id,
       ipAddress: extractIp(req),
       userAgent: req?.headers?.['user-agent'],
     };
