@@ -41,6 +41,10 @@ const SYSTEM_SETTINGS_MAP: Record<
     ],
     sortOrder: 0,
   },
+  Newsletter: {
+    keys: ['newsletter_auto_blog', 'newsletter_auto_project'],
+    sortOrder: 9,
+  },
   Appearance: {
     keys: [
       'avatar',

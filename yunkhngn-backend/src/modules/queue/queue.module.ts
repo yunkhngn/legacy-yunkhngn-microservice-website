@@ -8,6 +8,7 @@ import { PrismaBlogRepository } from '../blog/infrastructure/blog.repository';
 import { IProjectRepository } from '../project/domain/project.repository.interface';
 import { PrismaProjectRepository } from '../project/infrastructure/project.repository';
 import { NewsletterModule } from '../integrations/newsletter/newsletter.module';
+import { SettingsModule } from '../settings/settings.module';
 import { RagSyncQueue } from './rag-sync/rag-sync.queue';
 import { RagSyncProcessor } from './rag-sync/rag-sync.processor';
 import { RagSyncController } from './rag-sync/rag-sync.controller';
@@ -37,6 +38,7 @@ import { NewsletterProcessor } from './newsletter/newsletter.processor';
     PrismaModule,
     AiModule,
     NewsletterModule,
+    SettingsModule,
   ],
   controllers: [RagSyncController],
   providers: [
