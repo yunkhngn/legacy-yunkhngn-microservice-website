@@ -1,11 +1,17 @@
 import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PrismaModule } from '../../database/prisma/prisma.module';
 import { AiModule } from '../ai/ai.module';
-import { BlogModule } from '../blog/blog.module';
+import { IBlogRepository } from '../blog/domain/blog.repository.interface';
+import { PrismaBlogRepository } from '../blog/infrastructure/blog.repository';
+import { IProjectRepository } from '../project/domain/project.repository.interface';
+import { PrismaProjectRepository } from '../project/infrastructure/project.repository';
 import { NewsletterModule } from '../integrations/newsletter/newsletter.module';
 import { RagSyncQueue } from './rag-sync/rag-sync.queue';
 import { RagSyncProcessor } from './rag-sync/rag-sync.processor';
+import { RagSyncController } from './rag-sync/rag-sync.controller';
+import { RagSyncReindexService } from './rag-sync/rag-sync.reindex.service';
 import { NewsletterQueue } from './newsletter/newsletter.queue';
 import { NewsletterProcessor } from './newsletter/newsletter.processor';
 
@@ -28,13 +34,23 @@ import { NewsletterProcessor } from './newsletter/newsletter.processor';
     }),
     BullModule.registerQueue({ name: 'newsletter' }),
     BullModule.registerQueue({ name: 'rag-sync' }),
+    PrismaModule,
     AiModule,
-    BlogModule,
     NewsletterModule,
   ],
+  controllers: [RagSyncController],
   providers: [
+    {
+      provide: IBlogRepository,
+      useClass: PrismaBlogRepository,
+    },
+    {
+      provide: IProjectRepository,
+      useClass: PrismaProjectRepository,
+    },
     RagSyncQueue,
     RagSyncProcessor,
+    RagSyncReindexService,
     NewsletterQueue,
     NewsletterProcessor,
   ],
