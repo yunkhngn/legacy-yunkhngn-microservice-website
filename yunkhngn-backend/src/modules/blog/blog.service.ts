@@ -12,6 +12,7 @@ import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { RagSyncQueue } from '../queue/rag-sync/rag-sync.queue';
 
 @Injectable()
 export class BlogService {
@@ -25,6 +26,7 @@ export class BlogService {
     private readonly cloudinaryService: CloudinaryService,
     private readonly auditLogsService: AuditLogsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly ragSyncQueue: RagSyncQueue,
   ) {}
 
   async create(createBlogDto: CreateBlogDto): Promise<Blog> {
@@ -47,16 +49,17 @@ export class BlogService {
 
     // Sync to RAG if published
     if (newBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument(
-        'blog',
-        newBlog.id,
-        newBlog.contentJSON || '',
-        {
+      await this.ragSyncQueue.enqueue({
+        op: 'upsert',
+        type: 'blog',
+        docId: newBlog.id,
+        content: newBlog.contentJSON || '',
+        metadata: {
           title: newBlog.title,
           slug: newBlog.slug,
           tags: newBlog.tags,
         },
-      );
+      });
 
       this.logger.log(
         `New blog published: ${newBlog.title}. Sending newsletter...`,
@@ -91,31 +94,24 @@ export class BlogService {
   }
 
   async findRelatedPosts(currentId: string, tags: string): Promise<Blog[]> {
+    const TARGET = 2;
+
     // Try RAG-based semantic search first
+    const ragBlogs: Blog[] = [];
     try {
-      const ragResults = await this.aiService.findSimilar('blog', currentId, 2);
-      if (ragResults.length > 0) {
-        const ragBlogs: Blog[] = [];
-        for (const result of ragResults) {
-          const blog = await this.blogRepository.findById(result.doc_id);
-          if (blog && blog.status === 'PUBLISHED') {
-            ragBlogs.push(blog);
-          }
+      const ragResults = await this.aiService.findSimilar(
+        'blog',
+        currentId,
+        TARGET,
+      );
+      for (const result of ragResults) {
+        const blog = await this.blogRepository.findById(result.doc_id);
+        if (blog && blog.status === 'PUBLISHED') {
+          ragBlogs.push(blog);
         }
-        if (ragBlogs.length >= 2) {
-          return ragBlogs.slice(0, 2);
-        }
-        // If RAG returned some but not enough, fill with tag-based
-        if (ragBlogs.length > 0) {
-          const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
-          const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
-          const extra = await this.blogRepository.findRelated(
-            excludeIds,
-            tagList,
-            2 - ragBlogs.length,
-          );
-          return [...ragBlogs, ...extra];
-        }
+      }
+      if (ragBlogs.length >= TARGET) {
+        return ragBlogs.slice(0, TARGET);
       }
     } catch (error) {
       this.logger.warn(
@@ -123,27 +119,47 @@ export class BlogService {
       );
     }
 
-    // Fallback: original tag-based logic
-    let related: Blog[] = [];
-    const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
+    // Fallback: rank by tag-overlap count (descending), tiebreak by recency.
+    // Avoids the old behaviour of "any blog sharing one common tag, newest first",
+    // which collapsed to "latest WRITING posts" when the current post had a generic tag.
+    const tagList = tags
+      ? tags
+          .split(',')
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean)
+      : [];
 
+    const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
+    const need = TARGET - ragBlogs.length;
+
+    let fillers: Blog[] = [];
     if (tagList.length > 0) {
-      related = await this.blogRepository.findRelated([currentId], tagList, 2);
-    }
-
-    if (related.length < 2) {
-      const excludeIds = [currentId, ...related.map((b) => b.id)];
-      // Note: This logic could be moved to repository if it gets complex
-      // For now, we'll just use what we have or add findRecent to repository
-      const recent = await this.blogRepository.findRelated(
+      const candidates = await this.blogRepository.findRelated(
         excludeIds,
-        [],
-        2 - related.length,
+        tagList,
+        Math.max(need * 5, 10),
       );
-      related = [...related, ...recent];
+      fillers = candidates
+        .map((b) => {
+          const cand = (b.tags || '')
+            .split(',')
+            .map((t) => t.trim().toLowerCase())
+            .filter(Boolean);
+          const overlap = cand.filter((t) => tagList.includes(t)).length;
+          return { blog: b, overlap };
+        })
+        .sort((a, b) => {
+          if (b.overlap !== a.overlap) return b.overlap - a.overlap;
+          return (
+            new Date(b.blog.createdAt as any).getTime() -
+            new Date(a.blog.createdAt as any).getTime()
+          );
+        })
+        .slice(0, need)
+        .map((x) => x.blog);
     }
 
-    return related;
+    return [...ragBlogs, ...fillers].slice(0, TARGET);
   }
 
   async update(id: string, updateBlogDto: UpdateBlogDto): Promise<Blog> {
@@ -199,16 +215,17 @@ export class BlogService {
 
     // Sync to RAG if published
     if (updatedBlog.status === 'PUBLISHED') {
-      await this.aiService.syncDocument(
-        'blog',
-        updatedBlog.id,
-        updatedBlog.contentJSON || '',
-        {
+      await this.ragSyncQueue.enqueue({
+        op: 'upsert',
+        type: 'blog',
+        docId: updatedBlog.id,
+        content: updatedBlog.contentJSON || '',
+        metadata: {
           title: updatedBlog.title,
           slug: updatedBlog.slug,
           tags: updatedBlog.tags,
         },
-      );
+      });
     }
 
     const wasPublished = currentBlog.status === 'PUBLISHED';
@@ -243,7 +260,7 @@ export class BlogService {
       return blog;
     }
 
-    await this.aiService.syncDocument('blog', id, '', {}, 'delete');
+    await this.ragSyncQueue.enqueue({ op: 'delete', type: 'blog', docId: id });
 
     const imagesToDelete = [
       blog.thumbnail,
