@@ -9,3 +9,16 @@ export class AuditLog {
   userAgent?: string;
   createdAt: Date;
 }
+
+export type CreateAuditLogInput = Omit<AuditLog, 'id' | 'createdAt'>;
+
+export interface AuditLogFilter {
+  skip?: number;
+  take?: number;
+  search?: string;
+  entity?: string;
+  action?: string;
+  userId?: string;
+  from?: Date;
+  to?: Date;
+}

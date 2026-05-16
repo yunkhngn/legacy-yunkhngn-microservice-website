@@ -44,6 +44,7 @@ import { MonitorModule } from './modules/monitor/monitor.module';
 import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
+import { AuditContextInterceptor } from './modules/audit-logs/audit-context.interceptor';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -51,7 +52,6 @@ import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.m
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
 import { NewsletterModule } from './modules/integrations/newsletter/newsletter.module';
-
 
 import { HealthController } from './modules/health/health.controller';
 
@@ -125,6 +125,10 @@ import { HealthController } from './modules/health/health.controller';
     },
     {
       provide: APP_INTERCEPTOR,
+      useClass: AuditContextInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
     {
@@ -133,4 +137,4 @@ import { HealthController } from './modules/health/health.controller';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

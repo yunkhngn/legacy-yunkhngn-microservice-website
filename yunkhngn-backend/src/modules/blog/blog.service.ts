@@ -6,6 +6,7 @@ import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
 import { AiService } from '../ai/ai.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 import { Blog } from './domain/blog.entity';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
@@ -64,10 +65,10 @@ export class BlogService {
     }
 
     await this.auditLogsService.log({
-      action: 'CREATE_BLOG',
-      entity: 'Blog',
+      action: AuditAction.CREATE_BLOG,
+      entity: AuditEntity.BLOG,
       entityId: newBlog.id,
-      details: JSON.stringify({ title: newBlog.title, slug: newBlog.slug }),
+      details: { title: newBlog.title, slug: newBlog.slug },
     });
 
     return newBlog;
@@ -117,7 +118,9 @@ export class BlogService {
         }
       }
     } catch (error) {
-      this.logger.warn(`RAG search failed, falling back to tag-based: ${error.message}`);
+      this.logger.warn(
+        `RAG search failed, falling back to tag-based: ${error.message}`,
+      );
     }
 
     // Fallback: original tag-based logic
@@ -224,10 +227,10 @@ export class BlogService {
     }
 
     await this.auditLogsService.log({
-      action: 'UPDATE_BLOG',
-      entity: 'Blog',
+      action: AuditAction.UPDATE_BLOG,
+      entity: AuditEntity.BLOG,
       entityId: id,
-      details: JSON.stringify({ title: updatedBlog.title, slug: updatedBlog.slug }),
+      details: { title: updatedBlog.title, slug: updatedBlog.slug },
     });
 
     return updatedBlog;
@@ -236,23 +239,24 @@ export class BlogService {
   async remove(id: string): Promise<Blog> {
     const blog = await this.blogRepository.delete(id);
     await this.cacheManager.del('admin_dashboard_stats');
-    if (blog) {
-      await this.aiService.syncDocument('blog', id, '', {}, 'delete');
-
-      // Cleanup all associated Cloudinary images
-      const imagesToDelete = [
-        blog.thumbnail,
-        blog.seoImage,
-        ...extractImagesFromJsonContent(blog.contentJSON),
-      ];
-      void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+    if (!blog) {
+      return blog;
     }
 
+    await this.aiService.syncDocument('blog', id, '', {}, 'delete');
+
+    const imagesToDelete = [
+      blog.thumbnail,
+      blog.seoImage,
+      ...extractImagesFromJsonContent(blog.contentJSON),
+    ];
+    void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
+
     await this.auditLogsService.log({
-      action: 'DELETE_BLOG',
-      entity: 'Blog',
+      action: AuditAction.DELETE_BLOG,
+      entity: AuditEntity.BLOG,
       entityId: id,
-      details: JSON.stringify({ title: blog?.title }),
+      details: { title: blog.title, slug: blog.slug },
     });
 
     return blog;

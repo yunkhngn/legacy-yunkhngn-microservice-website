@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuditLogsService } from './audit-logs.service';
+import { FindAuditLogsDto } from './dto/find-audit-logs.dto';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
+import { AUDIT_ENTITIES, AUDIT_ACTIONS } from './domain/audit-log.types';
 
 @ApiTags('Audit Logs')
 @Controller('audit-logs')
@@ -25,25 +16,26 @@ export class AuditLogsController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get paginated audit logs (Admin only)' })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'entity', required: false })
-  @ApiQuery({ name: 'action', required: false })
-  findAll(
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-    @Query('search') search: string,
-    @Query('entity') entity: string,
-    @Query('action') action: string,
-  ) {
-    return this.service.findAll(
-      +page || 1,
-      +limit || 20,
-      search,
-      entity,
-      action,
-    );
+  findAll(@Query() query: FindAuditLogsDto) {
+    return this.service.findAll({
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+      search: query.search,
+      entity: query.entity,
+      action: query.action,
+      userId: query.userId,
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+    });
+  }
+
+  @Get('metadata')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get known audit entity/action values (Admin only)',
+  })
+  metadata() {
+    return { entities: AUDIT_ENTITIES, actions: AUDIT_ACTIONS };
   }
 
   @Get(':id')
