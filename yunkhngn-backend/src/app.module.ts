@@ -45,6 +45,7 @@ import { ChatLogsModule } from './modules/chat-logs/chat-logs.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuditContextInterceptor } from './modules/audit-logs/audit-context.interceptor';
+import { QueueModule } from './modules/queue/queue.module';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -106,6 +107,7 @@ import { HealthController } from './modules/health/health.controller';
     ChatLogsModule,
     KnowledgeModule,
     AuditLogsModule,
+    QueueModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController, HealthController],
