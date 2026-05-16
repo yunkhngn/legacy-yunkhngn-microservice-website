@@ -6,6 +6,7 @@ export interface IBlogRepository {
   findBySlugOrId(slugOrId: string): Promise<Blog | null>;
   findBySlug(slug: string): Promise<Blog | null>;
   findById(id: string): Promise<Blog | null>;
+  findManyByIds(ids: string[]): Promise<Blog[]>;
   findRelated(
     excludeIds: string[],
     tags: string[],
