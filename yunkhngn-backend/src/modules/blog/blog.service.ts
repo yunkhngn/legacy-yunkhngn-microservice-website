@@ -5,6 +5,7 @@ import { UpdateBlogDto } from './dto/update-blog.dto';
 import { IBlogRepository } from './domain/blog.repository.interface';
 import { NewsletterService } from '../integrations/newsletter/newsletter.service';
 import { AiService } from '../ai/ai.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { Blog } from './domain/blog.entity';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
@@ -21,6 +22,7 @@ export class BlogService {
     private readonly configService: ConfigService,
     private readonly aiService: AiService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly auditLogsService: AuditLogsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -60,6 +62,13 @@ export class BlogService {
       );
       await this.sendNewsletterForBlog(newBlog);
     }
+
+    await this.auditLogsService.log({
+      action: 'CREATE_BLOG',
+      entity: 'Blog',
+      entityId: newBlog.id,
+      details: JSON.stringify({ title: newBlog.title, slug: newBlog.slug }),
+    });
 
     return newBlog;
   }
@@ -214,6 +223,13 @@ export class BlogService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    await this.auditLogsService.log({
+      action: 'UPDATE_BLOG',
+      entity: 'Blog',
+      entityId: id,
+      details: JSON.stringify({ title: updatedBlog.title, slug: updatedBlog.slug }),
+    });
+
     return updatedBlog;
   }
 
@@ -231,6 +247,14 @@ export class BlogService {
       ];
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
+
+    await this.auditLogsService.log({
+      action: 'DELETE_BLOG',
+      entity: 'Blog',
+      entityId: id,
+      details: JSON.stringify({ title: blog?.title }),
+    });
+
     return blog;
   }
 

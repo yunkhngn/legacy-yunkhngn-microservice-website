@@ -4,6 +4,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { IProjectRepository } from './domain/project.repository.interface';
 import { Project } from './domain/project.entity';
 import { AiService } from '../ai/ai.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -17,6 +18,7 @@ export class ProjectService {
     @Inject(IProjectRepository)
     private readonly projectRepository: IProjectRepository,
     private readonly aiService: AiService,
+    private readonly auditLogsService: AuditLogsService,
     private readonly cloudinaryService: CloudinaryService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
@@ -67,6 +69,13 @@ export class ProjectService {
         techStack: project.techStack,
       },
     );
+
+    await this.auditLogsService.log({
+      action: 'CREATE_PROJECT',
+      entity: 'Project',
+      entityId: project.id,
+      details: JSON.stringify({ title: project.title, slug: project.slug }),
+    });
 
     return project;
   }
@@ -167,6 +176,13 @@ export class ProjectService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    await this.auditLogsService.log({
+      action: 'UPDATE_PROJECT',
+      entity: 'Project',
+      entityId: id,
+      details: JSON.stringify({ title: project.title, slug: project.slug }),
+    });
+
     return project;
   }
 
@@ -185,6 +201,14 @@ export class ProjectService {
       ];
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
+
+    await this.auditLogsService.log({
+      action: 'DELETE_PROJECT',
+      entity: 'Project',
+      entityId: id,
+      details: JSON.stringify({ title: project?.title }),
+    });
+
     return project;
   }
 }
