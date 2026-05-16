@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
 import { IBlogRepository } from './domain/blog.repository.interface';
-import { NewsletterService } from '../integrations/newsletter/newsletter.service';
+import { NewsletterQueue } from '../queue/newsletter/newsletter.queue';
 import { AiService } from '../ai/ai.service';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -27,8 +27,8 @@ const mockBlogRepository = {
   incrementViews: jest.fn(),
 };
 
-const mockNewsletterService = {
-  sendToAll: jest.fn(),
+const mockNewsletterQueue = {
+  announce: jest.fn(),
 };
 
 const mockAiService = {
@@ -61,7 +61,7 @@ describe('BlogService', () => {
       providers: [
         BlogService,
         { provide: IBlogRepository, useValue: mockBlogRepository },
-        { provide: NewsletterService, useValue: mockNewsletterService },
+        { provide: NewsletterQueue, useValue: mockNewsletterQueue },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: AiService, useValue: mockAiService },
         { provide: CloudinaryService, useValue: mockCloudinaryService },
@@ -158,7 +158,7 @@ describe('BlogService - rag-sync enqueue', () => {
   let blogRepository: any;
   let ragSyncQueue: { enqueue: jest.Mock };
   let aiService: { syncDocument: jest.Mock; findSimilar: jest.Mock };
-  let newsletterService: { sendToAll: jest.Mock; sendNewsletter?: jest.Mock };
+  let newsletterQueue: { announce: jest.Mock };
 
   beforeEach(async () => {
     blogRepository = {
@@ -199,15 +199,13 @@ describe('BlogService - rag-sync enqueue', () => {
       syncDocument: jest.fn().mockResolvedValue(undefined),
       findSimilar: jest.fn().mockResolvedValue([]),
     };
-    newsletterService = {
-      sendToAll: jest.fn().mockResolvedValue({ sent: 0 }),
-    };
+    newsletterQueue = { announce: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         BlogService,
         { provide: IBlogRepository, useValue: blogRepository },
-        { provide: NewsletterService, useValue: newsletterService },
+        { provide: NewsletterQueue, useValue: newsletterQueue },
         { provide: ConfigService, useValue: { get: () => 'http://x' } },
         { provide: AiService, useValue: aiService },
         {
@@ -245,5 +243,93 @@ describe('BlogService - rag-sync enqueue', () => {
       type: 'blog',
       docId: 'b1',
     });
+  });
+});
+
+describe('BlogService - newsletter announce enqueue', () => {
+  let service: BlogService;
+  let blogRepository: any;
+  let newsletterQueue: { announce: jest.Mock };
+  let ragSyncQueue: { enqueue: jest.Mock };
+
+  beforeEach(async () => {
+    blogRepository = {
+      findBySlug: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockResolvedValue({
+        id: 'b1',
+        status: 'DRAFT',
+        slug: 's',
+        title: 't',
+      }),
+      create: jest.fn().mockResolvedValue({
+        id: 'b1',
+        status: 'PUBLISHED',
+        slug: 's',
+        title: 't',
+        contentJSON: '',
+        tags: '',
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'b1',
+        status: 'PUBLISHED',
+        slug: 's',
+        title: 't',
+        contentJSON: '',
+        tags: '',
+      }),
+      delete: jest.fn(),
+    };
+    newsletterQueue = { announce: jest.fn().mockResolvedValue(undefined) };
+    ragSyncQueue = { enqueue: jest.fn().mockResolvedValue(undefined) };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BlogService,
+        { provide: IBlogRepository, useValue: blogRepository },
+        { provide: NewsletterQueue, useValue: newsletterQueue },
+        { provide: ConfigService, useValue: { get: () => 'http://x' } },
+        {
+          provide: AiService,
+          useValue: { syncDocument: jest.fn(), findSimilar: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: CloudinaryService,
+          useValue: { deleteImagesSafely: jest.fn() },
+        },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
+        { provide: RagSyncQueue, useValue: ragSyncQueue },
+      ],
+    }).compile();
+    service = moduleRef.get(BlogService);
+  });
+
+  it('announces when a blog is created with PUBLISHED status', async () => {
+    await service.create({ slug: 's', title: 't', status: 'PUBLISHED' } as any);
+    expect(newsletterQueue.announce).toHaveBeenCalledWith('b1');
+  });
+
+  it('announces when a blog transitions to PUBLISHED via update', async () => {
+    blogRepository.findById.mockResolvedValueOnce({
+      id: 'b1',
+      status: 'DRAFT',
+      slug: 's',
+      title: 't',
+    });
+    await service.update('b1', { status: 'PUBLISHED' } as any);
+    expect(newsletterQueue.announce).toHaveBeenCalledWith('b1');
+  });
+
+  it('does NOT announce when blog stays DRAFT', async () => {
+    blogRepository.create.mockResolvedValueOnce({
+      id: 'b1',
+      status: 'DRAFT',
+      slug: 's',
+      title: 't',
+      contentJSON: '',
+      tags: '',
+    });
+    await service.create({ slug: 's', title: 't' } as any);
+    expect(newsletterQueue.announce).not.toHaveBeenCalled();
   });
 });
