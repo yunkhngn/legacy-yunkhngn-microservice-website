@@ -1,4 +1,24 @@
 import pytest
+import numpy as np
+import sys
+import types
+
+chromadb_module = sys.modules.setdefault("chromadb", types.ModuleType("chromadb"))
+chromadb_config_module = sys.modules.setdefault(
+    "chromadb.config", types.ModuleType("chromadb.config")
+)
+setattr(chromadb_config_module, "Settings", lambda **kwargs: kwargs)
+setattr(
+    chromadb_module,
+    "PersistentClient",
+    lambda *args, **kwargs: types.SimpleNamespace(
+        get_or_create_collection=lambda name: types.SimpleNamespace()
+    ),
+)
+google_module = sys.modules.setdefault("google", types.ModuleType("google"))
+genai_module = sys.modules.setdefault("google.genai", types.ModuleType("google.genai"))
+setattr(google_module, "genai", genai_module)
+
 from app.services.rag_service import RAGService
 
 
@@ -45,3 +65,40 @@ class TestDeduplicateResults:
         ]
         deduped = RAGService.deduplicate_results(raw_results, max_per_doc=2)
         assert len(deduped) == 3
+
+
+class FakeCollection:
+    def get(self, ids, include):
+        return {
+            "ids": ids,
+            "embeddings": np.array([[0.1, 0.2, 0.3]]),
+            "documents": ["source"],
+        }
+
+    def query(self, query_embeddings, n_results, where):
+        return {
+            "ids": [["blog_current_0", "blog_other_0"]],
+            "metadatas": [[
+                {"doc_id": "current", "doc_type": "blog", "title": "Current"},
+                {"doc_id": "other", "doc_type": "blog", "title": "Other", "slug": "other"},
+            ]],
+            "distances": [[0.0, 0.42]],
+        }
+
+
+@pytest.mark.asyncio
+async def test_find_similar_accepts_numpy_embeddings_from_chroma():
+    service = object.__new__(RAGService)
+    service.collection = FakeCollection()
+
+    results = await service.find_similar("blog", "current", top_k=1)
+
+    assert results == [
+        {
+            "doc_id": "other",
+            "doc_type": "blog",
+            "score": 0.42,
+            "title": "Other",
+            "slug": "other",
+        }
+    ]
