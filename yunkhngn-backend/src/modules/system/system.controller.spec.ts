@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SystemController } from './system.controller';
 import { SystemService } from './system.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('SystemController', () => {
   let controller: SystemController;
@@ -17,6 +18,7 @@ describe('SystemController', () => {
           provide: SystemService,
           useValue: mockSystemService,
         },
+        { provide: CACHE_MANAGER, useValue: { get: jest.fn(), set: jest.fn() } },
       ],
     }).compile();
 

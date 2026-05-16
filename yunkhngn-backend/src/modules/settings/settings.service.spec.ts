@@ -4,6 +4,7 @@ import { ISettingsRepository } from './domain/settings.repository.interface';
 import { EncryptionService } from '../../common/encryption.service';
 import { AiService } from '../ai/ai.service';
 import { BadRequestException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('SettingsService', () => {
   let service: SettingsService;
@@ -38,6 +39,7 @@ describe('SettingsService', () => {
         { provide: ISettingsRepository, useValue: mockSettingsRepository },
         { provide: EncryptionService, useValue: mockEncryptionService },
         { provide: AiService, useValue: mockAiService },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
       ],
     }).compile();
 
@@ -117,7 +119,7 @@ describe('SettingsService', () => {
 
       await service.update(dto);
 
-      expect(repo.upsert).toHaveBeenCalledWith('bio', 'new bio', 'General', 5, false);
+      expect(repo.upsert).toHaveBeenCalledWith('bio', 'new bio', 'General', 5, false, false, false);
       expect(ai.syncDocument).toHaveBeenCalledWith('setting', 'bio', 'new bio', expect.any(Object));
     });
 
@@ -129,7 +131,7 @@ describe('SettingsService', () => {
       await service.update(dto);
 
       expect(encryption.encrypt).toHaveBeenCalledWith('my-token');
-      expect(repo.upsert).toHaveBeenCalledWith('vercel_api_token', 'enc_my-token', 'Vercel', 10, true);
+      expect(repo.upsert).toHaveBeenCalledWith('vercel_api_token', 'enc_my-token', 'Vercel', 10, true, false, false);
     });
 
     it('should skip content update when masked value is sent for sensitive key', async () => {
@@ -141,7 +143,7 @@ describe('SettingsService', () => {
 
       // Should preserve original encrypted content, not encrypt the mask
       expect(encryption.encrypt).not.toHaveBeenCalled();
-      expect(repo.upsert).toHaveBeenCalledWith('vercel_api_token', 'enc_existing', 'Vercel', 10, true);
+      expect(repo.upsert).toHaveBeenCalledWith('vercel_api_token', 'enc_existing', 'Vercel', 10, true, false, false);
     });
 
     it('should allow toggling isSensitive via update', async () => {
@@ -153,7 +155,7 @@ describe('SettingsService', () => {
 
       // Now sensitive, so content should be encrypted
       expect(encryption.encrypt).toHaveBeenCalledWith('value');
-      expect(repo.upsert).toHaveBeenCalledWith('some_key', 'enc_value', 'Custom', 0, true);
+      expect(repo.upsert).toHaveBeenCalledWith('some_key', 'enc_value', 'Custom', 0, true, false, false);
     });
   });
 
@@ -167,7 +169,7 @@ describe('SettingsService', () => {
     });
 
     it('should throw when deleting a system setting', async () => {
-      repo.findById.mockResolvedValue({ id: 1, settingTitle: 'bio' });
+      repo.findById.mockResolvedValue({ id: 1, settingTitle: 'bio', isSystem: true });
       await expect(service.delete(1)).rejects.toThrow(BadRequestException);
     });
   });

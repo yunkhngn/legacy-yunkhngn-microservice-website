@@ -12,7 +12,7 @@ export class RagSyncQueue {
   constructor(@InjectQueue(RAG_SYNC_QUEUE) private readonly queue: Queue) {}
 
   async enqueue(job: RagSyncJob): Promise<void> {
-    const jobId = `${job.op}:${job.type}:${job.docId}:${Date.now()}`;
+    const jobId = `${job.op}-${job.type}-${job.docId}-${Date.now()}`;
     await this.queue.add(RAG_SYNC_JOB, job, {
       jobId,
       attempts: 5,

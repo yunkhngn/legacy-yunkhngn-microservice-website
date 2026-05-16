@@ -21,14 +21,14 @@ export class NewsletterQueue {
   async announce(blogId: string): Promise<void> {
     const payload: AnnouncePayload = { blogId };
     await this.queue.add(NEWSLETTER_JOB_ANNOUNCE, payload, {
-      jobId: `announce:${blogId}`,
+      jobId: `announce-${blogId}`,
       ...DEFAULT_OPTS,
     });
   }
 
   async send(payload: SendPayload): Promise<void> {
     await this.queue.add(NEWSLETTER_JOB_SEND, payload, {
-      jobId: `send:${payload.blogId}:${payload.subscriberId}`,
+      jobId: `send-${payload.blogId}-${payload.subscriberId}`,
       ...DEFAULT_OPTS,
     });
   }

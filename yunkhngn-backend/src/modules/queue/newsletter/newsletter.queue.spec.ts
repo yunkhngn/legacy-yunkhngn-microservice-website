@@ -27,11 +27,11 @@ describe('NewsletterQueue', () => {
     expect(add).toHaveBeenCalledWith(
       NEWSLETTER_JOB_ANNOUNCE,
       { blogId: 'b1' },
-      expect.objectContaining({ jobId: 'announce:b1', attempts: 3 }),
+      expect.objectContaining({ jobId: 'announce-b1', attempts: 3 }),
     );
   });
 
-  it('send uses blogId:subscriberId as the jobId for idempotency', async () => {
+  it('send uses blogId-subscriberId as the jobId for idempotency', async () => {
     await queue.send({
       blogId: 'b1',
       subscriberId: 's1',
@@ -41,7 +41,7 @@ describe('NewsletterQueue', () => {
     expect(add).toHaveBeenCalledWith(
       NEWSLETTER_JOB_SEND,
       { blogId: 'b1', subscriberId: 's1', email: 'a@b.com', token: 'tok' },
-      expect.objectContaining({ jobId: 'send:b1:s1', attempts: 3 }),
+      expect.objectContaining({ jobId: 'send-b1-s1', attempts: 3 }),
     );
   });
 });

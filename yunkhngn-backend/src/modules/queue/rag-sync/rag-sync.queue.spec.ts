@@ -31,7 +31,7 @@ describe('RagSyncQueue', () => {
       RAG_SYNC_JOB,
       expect.objectContaining({ op: 'upsert', type: 'blog', docId: 'b1' }),
       expect.objectContaining({
-        jobId: `upsert:blog:b1:${new Date('2026-05-16T00:00:00Z').getTime()}`,
+        jobId: `upsert-blog-b1-${new Date('2026-05-16T00:00:00Z').getTime()}`,
         attempts: 5,
       }),
     );
@@ -45,7 +45,7 @@ describe('RagSyncQueue', () => {
       RAG_SYNC_JOB,
       { op: 'delete', type: 'project', docId: 'p9' },
       expect.objectContaining({
-        jobId: `delete:project:p9:${new Date('2026-05-16T00:00:00Z').getTime()}`,
+        jobId: `delete-project-p9-${new Date('2026-05-16T00:00:00Z').getTime()}`,
       }),
     );
     jest.useRealTimers();
