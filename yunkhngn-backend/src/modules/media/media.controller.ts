@@ -16,13 +16,18 @@ import {
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { FirebaseAuthGuard, RolesGuard } from '../../common/guards';
 import { Roles } from '../../common/decorators';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @ApiTags('Media')
 @Controller('media')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class MediaController {
-  constructor(private readonly cloudinaryService: CloudinaryService) {}
+  constructor(
+    private readonly cloudinaryService: CloudinaryService,
+    private readonly auditLogsService: AuditLogsService,
+  ) {}
 
   @Get('signature')
   @ApiBearerAuth()
@@ -63,6 +68,15 @@ export class MediaController {
     if (!publicId) {
       throw new HttpException('publicId is required', HttpStatus.BAD_REQUEST);
     }
-    return this.cloudinaryService.deleteImage(publicId);
+    const result = await this.cloudinaryService.deleteImage(publicId);
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_MEDIA,
+      entity: AuditEntity.MEDIA,
+      entityId: publicId,
+      details: { publicId },
+    });
+
+    return result;
   }
 }

@@ -2,6 +2,8 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { IUserRepository } from './domain/user.repository.interface';
 import { User } from './domain/user.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class UserService {
@@ -9,6 +11,7 @@ export class UserService {
 
   constructor(
     @Inject(IUserRepository) private readonly userRepository: IUserRepository,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async findByUid(uid: string): Promise<User | null> {
@@ -35,12 +38,21 @@ export class UserService {
     });
 
     // 2. Create in DB
-    return this.userRepository.create({
+    const result = await this.userRepository.create({
       uid: userRecord.uid,
       email,
       name,
       role,
     });
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_USER,
+      entity: AuditEntity.USER,
+      entityId: userRecord.uid,
+      details: { email, name, role },
+    });
+
+    return result;
   }
 
   async update(
@@ -58,10 +70,19 @@ export class UserService {
     }
 
     // 2. Update DB
-    return this.userRepository.update(uid, {
+    const result = await this.userRepository.update(uid, {
       name: data.name,
       role: data.role,
     });
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_USER,
+      entity: AuditEntity.USER,
+      entityId: uid,
+      details: { name: data.name, role: data.role, passwordUpdated: !!data.password },
+    });
+
+    return result;
   }
 
   async delete(uid: string): Promise<User> {
@@ -71,7 +92,16 @@ export class UserService {
     await admin.auth().deleteUser(uid);
 
     // 2. Delete from DB
-    return this.userRepository.delete(uid);
+    const result = await this.userRepository.delete(uid);
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_USER,
+      entity: AuditEntity.USER,
+      entityId: uid,
+      details: { uid },
+    });
+
+    return result;
   }
 
   async createOrUpdate(

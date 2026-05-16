@@ -6,6 +6,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Contact } from './domain/contact.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class ContactService {
@@ -18,6 +20,7 @@ export class ContactService {
     private readonly aiService: AiService,
     private readonly notificationsService: NotificationsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async createContact(data: {
@@ -62,6 +65,13 @@ export class ContactService {
 
     await this.cacheManager.del('admin_dashboard_stats');
 
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_CONTACT,
+      entity: AuditEntity.CONTACT,
+      entityId: contact.id,
+      details: { email: contact.email, subject: contact.subject },
+    });
+
     return contact;
   }
 
@@ -81,6 +91,14 @@ export class ContactService {
     this.logger.log(`Updating contact status: ${id} to ${status}`);
     const result = await this.contactRepository.update(id, { status });
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_CONTACT,
+      entity: AuditEntity.CONTACT,
+      entityId: id,
+      details: { status },
+    });
+
     return result;
   }
 
@@ -99,6 +117,14 @@ export class ContactService {
       respondedAt: new Date(),
     });
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.RESPOND_CONTACT,
+      entity: AuditEntity.CONTACT,
+      entityId: id,
+      details: { adminResponse: response },
+    });
+
     return result;
   }
 
@@ -161,6 +187,14 @@ IMPORTANT: Respond in ${lang}. Do not include a subject line.`;
     this.logger.log(`Removing contact ID: ${id}`);
     const result = await this.contactRepository.delete(id);
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_CONTACT,
+      entity: AuditEntity.CONTACT,
+      entityId: id,
+      details: { id },
+    });
+
     return result;
   }
 

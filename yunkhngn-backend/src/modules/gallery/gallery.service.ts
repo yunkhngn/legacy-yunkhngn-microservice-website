@@ -5,6 +5,8 @@ import { IGalleryRepository } from './domain/gallery.repository.interface';
 import { Gallery } from './domain/gallery.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class GalleryService {
@@ -15,6 +17,7 @@ export class GalleryService {
     private readonly galleryRepository: IGalleryRepository,
     private readonly cloudinaryService: CloudinaryService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async create(createGalleryDto: CreateGalleryDto): Promise<Gallery> {
@@ -22,6 +25,14 @@ export class GalleryService {
     const result = await this.galleryRepository.create(createGalleryDto);
     await this.cacheManager.del('admin_dashboard_stats');
     await this.cacheManager.del('gallery_tags');
+    
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_PHOTO,
+      entity: AuditEntity.PHOTO,
+      entityId: result.id,
+      details: { caption: result.caption, albumId: result.albumId },
+    });
+    
     return result;
   }
 
@@ -95,6 +106,14 @@ export class GalleryService {
     const result = await this.galleryRepository.update(id, data);
     await this.cacheManager.del('admin_dashboard_stats');
     await this.cacheManager.del('gallery_tags');
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_PHOTO,
+      entity: AuditEntity.PHOTO,
+      entityId: id,
+      details: data,
+    });
+
     return result;
   }
 
@@ -109,6 +128,14 @@ export class GalleryService {
 
     await this.cacheManager.del('admin_dashboard_stats');
     await this.cacheManager.del('gallery_tags');
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_PHOTO,
+      entity: AuditEntity.PHOTO,
+      entityId: id,
+      details: { id },
+    });
+
     return photo;
   }
 

@@ -16,6 +16,8 @@ import * as sanitizeHtml from 'sanitize-html';
 import { SettingsService } from '../settings/settings.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Comment } from './domain/comment.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class CommentsService {
@@ -27,6 +29,7 @@ export class CommentsService {
     private readonly commentRepository: ICommentRepository,
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   private checkRateLimit(uid: string): void {
@@ -113,6 +116,17 @@ export class CommentsService {
     this.triggerNotification(comment, createCommentDto, cleanContent).catch(
       (err) => this.logger.error('Failed to trigger notification', err.stack),
     );
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_COMMENT,
+      entity: AuditEntity.COMMENT,
+      entityId: comment.id,
+      details: {
+        content: comment.content.substring(0, 50),
+        blogId: comment.blogId,
+        projectId: comment.projectId,
+      },
+    });
 
     const [commentWithUser] = await this.attachUserDetails([comment]);
     return commentWithUser;
@@ -225,7 +239,16 @@ export class CommentsService {
     }
 
     this.logger.log(`Updating comment ID: ${id}`);
-    return this.commentRepository.update(id, updateCommentDto);
+    const result = await this.commentRepository.update(id, updateCommentDto);
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_COMMENT,
+      entity: AuditEntity.COMMENT,
+      entityId: id,
+      details: updateCommentDto as Record<string, unknown>,
+    });
+
+    return result;
   }
 
   async remove(id: string, uid: string, isAdmin: boolean) {
@@ -241,6 +264,13 @@ export class CommentsService {
     if (isAdmin) {
       await this.commentRepository.resolveReportsForComment(id);
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_COMMENT,
+      entity: AuditEntity.COMMENT,
+      entityId: id,
+      details: { id },
+    });
   }
 
   async hide(id: string) {
@@ -302,6 +332,14 @@ export class CommentsService {
         commentId,
         updateData,
       );
+
+      void this.auditLogsService.log({
+        action: AuditAction.VOTE_COMMENT,
+        entity: AuditEntity.COMMENT,
+        entityId: commentId,
+        details: { value: voteDto.value },
+      });
+
       const [commentWithUser] = await this.attachUserDetails([updatedComment]);
       return commentWithUser;
     }
@@ -331,11 +369,20 @@ export class CommentsService {
       throw new BadRequestException('You have already reported this comment');
     }
 
-    return this.commentRepository.createReport({
+    const report = await this.commentRepository.createReport({
       commentId,
       reporterUid,
       reason: reportDto.reason,
     });
+
+    void this.auditLogsService.log({
+      action: AuditAction.REPORT_COMMENT,
+      entity: AuditEntity.COMMENT,
+      entityId: commentId,
+      details: { reason: reportDto.reason },
+    });
+
+    return report;
   }
 
   async getReports(status?: string, page: number = 1, limit: number = 100) {

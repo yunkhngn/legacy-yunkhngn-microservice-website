@@ -9,6 +9,8 @@ import { IShortLinkRepository } from './domain/shortlink.repository.interface';
 import { CreateShortlinkDto } from './dto/create-shortlink.dto';
 import { UpdateShortlinkDto } from './dto/update-shortlink.dto';
 import { ShortLink } from './domain/shortlink.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class ShortlinkService {
@@ -17,6 +19,7 @@ export class ShortlinkService {
   constructor(
     @Inject(IShortLinkRepository)
     private readonly shortLinkRepository: IShortLinkRepository,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   private generateCode(length = 6): string {
@@ -55,13 +58,22 @@ export class ShortlinkService {
     }
 
     this.logger.log(`Creating shortlink: ${code} -> ${dto.targetUrl}`);
-    return this.shortLinkRepository.create({
+    const result = await this.shortLinkRepository.create({
       code,
       targetUrl: dto.targetUrl,
       title: dto.title,
       isActive: dto.isActive ?? true,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
     });
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_SHORTLINK,
+      entity: AuditEntity.SHORTLINK,
+      entityId: result.id,
+      details: { code: result.code, targetUrl: result.targetUrl, title: result.title },
+    });
+
+    return result;
   }
 
   async findAll(): Promise<ShortLink[]> {
@@ -115,7 +127,16 @@ export class ShortlinkService {
     }
 
     this.logger.log(`Updating shortlink ID: ${id}`);
-    return this.shortLinkRepository.update(id, data);
+    const result = await this.shortLinkRepository.update(id, data);
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_SHORTLINK,
+      entity: AuditEntity.SHORTLINK,
+      entityId: id,
+      details: dto as Record<string, unknown>,
+    });
+
+    return result;
   }
 
   async remove(id: string): Promise<ShortLink> {
@@ -125,7 +146,16 @@ export class ShortlinkService {
     }
 
     this.logger.log(`Removing shortlink ID: ${id}`);
-    return this.shortLinkRepository.delete(id);
+    const result = await this.shortLinkRepository.delete(id);
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_SHORTLINK,
+      entity: AuditEntity.SHORTLINK,
+      entityId: id,
+      details: { id },
+    });
+
+    return result;
   }
 
   async bulkDelete(ids: string[]) {

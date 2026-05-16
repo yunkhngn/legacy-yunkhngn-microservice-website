@@ -2,6 +2,8 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ISubscriberRepository } from './domain/subscriber.repository.interface';
 import { EmailService } from '../email/email.service';
 import { v4 as uuidv4 } from 'uuid';
+import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../../audit-logs/domain/audit-log.types';
 
 export interface NewsletterBlog {
   title: string;
@@ -23,6 +25,7 @@ export class NewsletterService {
     @Inject(ISubscriberRepository)
     private readonly repository: ISubscriberRepository,
     private readonly emailService: EmailService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async subscribe(email: string) {
@@ -116,6 +119,13 @@ export class NewsletterService {
           ),
         );
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.SEND_NEWSLETTER,
+      entity: AuditEntity.NEWSLETTER,
+      details: { subject, sentCount: subscribers.length },
+    });
+
     return { sent: subscribers.length };
   }
 
