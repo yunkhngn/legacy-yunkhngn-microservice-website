@@ -169,30 +169,25 @@ class RAGService:
             n_results=fetch_k,
             where={"doc_type": doc_type}  # Only match same type (blog→blog, project→project)
         )
-        
-        THRESHOLD = 1.4
-        
+
+        # No absolute threshold here: we already constrain by doc_type and exclude self,
+        # so the top_k nearest neighbours within the same type are the best suggestions
+        # we have — even on a small corpus where absolute distances are large.
         formatted_results = []
         seen_doc_ids = set()
-        
+
         if results['ids'] and len(results['ids']) > 0:
             for i in range(len(results['ids'][0])):
                 metadata = results['metadatas'][0][i]
                 result_doc_id = metadata.get("doc_id", "")
                 distance = results['distances'][0][i] if 'distances' in results else 0
-                
-                # Skip self
+
                 if result_doc_id == doc_id:
                     continue
-                
-                # Skip if over threshold
-                if distance > THRESHOLD:
-                    continue
-                
-                # Skip duplicates (different chunks from same document)
+
                 if result_doc_id in seen_doc_ids:
                     continue
-                
+
                 seen_doc_ids.add(result_doc_id)
                 formatted_results.append({
                     "doc_id": result_doc_id,
@@ -201,10 +196,10 @@ class RAGService:
                     "title": metadata.get("title", ""),
                     "slug": metadata.get("slug", ""),
                 })
-                
+
                 if len(formatted_results) >= top_k:
                     break
-        
+
         return formatted_results
 
     @staticmethod
