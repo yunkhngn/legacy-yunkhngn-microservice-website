@@ -10,6 +10,7 @@ import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service
 import { extractImagesFromJsonContent } from '../../common/utils/image-extractor.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { RagSyncQueue } from '../queue/rag-sync/rag-sync.queue';
 
 @Injectable()
 export class ProjectService {
@@ -22,6 +23,7 @@ export class ProjectService {
     private readonly auditLogsService: AuditLogsService,
     private readonly cloudinaryService: CloudinaryService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly ragSyncQueue: RagSyncQueue,
   ) {}
 
   private mapDtoToEntityData(dto: CreateProjectDto | UpdateProjectDto) {
@@ -60,16 +62,17 @@ export class ProjectService {
     await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG
-    await this.aiService.syncDocument(
-      'project',
-      project.id,
-      project.contentJSON || project.description || '',
-      {
+    await this.ragSyncQueue.enqueue({
+      op: 'upsert',
+      type: 'project',
+      docId: project.id,
+      content: project.contentJSON || project.description || '',
+      metadata: {
         title: project.title,
         slug: project.slug,
         techStack: project.techStack,
       },
-    );
+    });
 
     await this.auditLogsService.log({
       action: AuditAction.CREATE_PROJECT,
@@ -92,7 +95,7 @@ export class ProjectService {
     }
     if (!project) return null;
 
-    const relatedProjects = await this.findRelatedProjects(project.id);
+    const relatedProjects = await this.findRelatedProjects(project);
 
     return {
       ...project,
@@ -100,27 +103,84 @@ export class ProjectService {
     };
   }
 
-  async findRelatedProjects(currentId: string): Promise<Project[]> {
+  async findRelatedProjects(current: Project): Promise<Project[]> {
+    const TARGET = 3;
+
+    const ragProjects: Project[] = [];
     try {
       const ragResults = await this.aiService.findSimilar(
         'project',
-        currentId,
-        3,
+        current.id,
+        TARGET,
       );
-      if (ragResults.length > 0) {
-        const projects: Project[] = [];
-        for (const result of ragResults) {
-          const proj = await this.projectRepository.findById(result.doc_id);
-          if (proj) {
-            projects.push(proj);
-          }
-        }
-        return projects;
+      for (const result of ragResults) {
+        const proj = await this.projectRepository.findById(result.doc_id);
+        if (proj) ragProjects.push(proj);
+      }
+      if (ragProjects.length >= TARGET) {
+        return ragProjects.slice(0, TARGET);
       }
     } catch (error) {
       this.logger.warn(`RAG search failed for project: ${error.message}`);
     }
-    return [];
+
+    // Fallback: rank by tag/techStack overlap so the section never silently disappears
+    // when RAG returns nothing.
+    const need = TARGET - ragProjects.length;
+    const excludeIds = [current.id, ...ragProjects.map((p) => p.id)];
+
+    const normalize = (raw: string | null | undefined): string[] => {
+      if (!raw) return [];
+      const trimmed = raw.trim();
+      // techStack may be a JSON-encoded array string
+      if (trimmed.startsWith('[')) {
+        try {
+          const arr = JSON.parse(trimmed);
+          if (Array.isArray(arr)) {
+            return arr
+              .map((x) => String(x).trim().toLowerCase())
+              .filter(Boolean);
+          }
+        } catch {
+          // fall through to comma-split
+        }
+      }
+      return trimmed
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean);
+    };
+
+    const tagList = normalize(current.tags);
+    const techList = normalize(current.techStack);
+
+    const candidates = await this.projectRepository.findRelated(
+      excludeIds,
+      tagList,
+      techList,
+      Math.max(need * 5, 10),
+    );
+
+    const fillers = candidates
+      .map((p) => {
+        const candTags = normalize(p.tags);
+        const candTech = normalize(p.techStack);
+        const overlap =
+          candTags.filter((t) => tagList.includes(t)).length +
+          candTech.filter((t) => techList.includes(t)).length;
+        return { project: p, overlap };
+      })
+      .sort((a, b) => {
+        if (b.overlap !== a.overlap) return b.overlap - a.overlap;
+        return (
+          new Date(b.project.createdAt as any).getTime() -
+          new Date(a.project.createdAt as any).getTime()
+        );
+      })
+      .slice(0, need)
+      .map((x) => x.project);
+
+    return [...ragProjects, ...fillers].slice(0, TARGET);
   }
 
   async update(
@@ -166,16 +226,17 @@ export class ProjectService {
     await this.cacheManager.del('admin_dashboard_stats');
 
     // Sync to RAG
-    await this.aiService.syncDocument(
-      'project',
-      project.id,
-      project.contentJSON || project.description || '',
-      {
+    await this.ragSyncQueue.enqueue({
+      op: 'upsert',
+      type: 'project',
+      docId: project.id,
+      content: project.contentJSON || project.description || '',
+      metadata: {
         title: project.title,
         slug: project.slug,
         techStack: project.techStack,
       },
-    );
+    });
 
     if (imagesToDelete.length > 0) {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
@@ -199,7 +260,7 @@ export class ProjectService {
       return project;
     }
 
-    await this.aiService.syncDocument('project', id, '', {}, 'delete');
+    await this.ragSyncQueue.enqueue({ op: 'delete', type: 'project', docId: id });
 
     const imagesToDelete = [
       project.cover,
