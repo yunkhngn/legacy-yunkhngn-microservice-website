@@ -10,11 +10,6 @@ export interface NewsletterBlog {
   thumbnail?: string | null;
 }
 
-export interface NewsletterSubscriber {
-  email: string;
-  token: string;
-}
-
 @Injectable()
 export class NewsletterService {
   private readonly logger = new Logger(NewsletterService.name);
@@ -86,27 +81,26 @@ export class NewsletterService {
     return { subject: `New Post: ${blog.title}`, content };
   }
 
-  async sendOne(blog: NewsletterBlog, subscriber: NewsletterSubscriber) {
+  async sendOne(blog: NewsletterBlog, email: string): Promise<void> {
     const { subject, content } = this.renderBlogEmail(blog);
-    const unsubscribeLink = this.unsubscribeUrl(subscriber.token);
-    return this.emailService.sendNewsletter(
-      subscriber.email,
-      subject,
-      content,
-      unsubscribeLink,
-    );
+    const subscriber = await this.repository.findByEmail(email);
+    const unsubscribeLink = subscriber?.token
+      ? this.unsubscribeUrl(subscriber.token)
+      : `${this.frontendUrl()}/newsletter/unsubscribe`;
+    await this.emailService.sendNewsletter(email, subject, content, unsubscribeLink);
   }
 
-  async findAllSubscribers() {
-    return this.repository.findAll();
+  async findAllSubscribers(): Promise<string[]> {
+    const subscribers = await this.repository.findAll();
+    return subscribers.map((s) => s.email);
   }
 
-  // Kept for backwards compatibility with any other callers; the queue path uses sendOne.
+  // Kept for backwards compatibility with blog.service.ts until Task 12 replaces it.
   async sendToAll(subject: string, content: string) {
     const subscribers = await this.repository.findAll();
     if (subscribers.length === 0) return { sent: 0 };
     for (const subscriber of subscribers) {
-      const unsubscribeLink = this.unsubscribeUrl(subscriber.token);
+      const unsubscribeLink = this.unsubscribeUrl(subscriber.token ?? '');
       this.emailService
         .sendNewsletter(subscriber.email, subject, content, unsubscribeLink)
         .catch((err) =>
