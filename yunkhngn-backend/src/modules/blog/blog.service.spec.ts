@@ -336,3 +336,58 @@ describe('BlogService - newsletter announce enqueue', () => {
     expect(newsletterQueue.announce).not.toHaveBeenCalled();
   });
 });
+
+describe('BlogService.findRelatedPosts - N+1 fix', () => {
+  let service: BlogService;
+  let blogRepository: any;
+
+  beforeEach(async () => {
+    blogRepository = {
+      findManyByIds: jest.fn(),
+      findRelated: jest.fn().mockResolvedValue([]),
+      findById: jest.fn(), // should NOT be called for the RAG path
+    };
+    const { NewsletterQueue } = await import(
+      '../queue/newsletter/newsletter.queue'
+    );
+    const { RagSyncQueue } = await import(
+      '../queue/rag-sync/rag-sync.queue'
+    );
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BlogService,
+        { provide: IBlogRepository, useValue: blogRepository },
+        { provide: ConfigService, useValue: { get: () => 'http://x' } },
+        {
+          provide: AiService,
+          useValue: {
+            findSimilar: jest
+              .fn()
+              .mockResolvedValue([{ doc_id: 'b2' }, { doc_id: 'b3' }]),
+            syncDocument: jest.fn(),
+          },
+        },
+        {
+          provide: CloudinaryService,
+          useValue: { deleteImagesSafely: jest.fn() },
+        },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
+        { provide: RagSyncQueue, useValue: { enqueue: jest.fn() } },
+        { provide: NewsletterQueue, useValue: { announce: jest.fn() } },
+      ],
+    }).compile();
+    service = moduleRef.get(BlogService);
+  });
+
+  it('uses findManyByIds and preserves RAG order; filters non-PUBLISHED', async () => {
+    blogRepository.findManyByIds.mockResolvedValue([
+      { id: 'b3', status: 'PUBLISHED' },
+      { id: 'b2', status: 'DRAFT' },
+    ]);
+    const result = await service.findRelatedPosts('b1', '');
+    expect(blogRepository.findManyByIds).toHaveBeenCalledWith(['b2', 'b3']);
+    expect(blogRepository.findById).not.toHaveBeenCalled();
+    expect(result.map((b: any) => b.id)).toEqual(['b3']);
+  });
+});

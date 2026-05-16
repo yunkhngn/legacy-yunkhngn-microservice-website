@@ -92,72 +92,47 @@ export class BlogService {
   }
 
   async findRelatedPosts(currentId: string, tags: string): Promise<Blog[]> {
-    const TARGET = 2;
-
-    // Try RAG-based semantic search first
-    const ragBlogs: Blog[] = [];
     try {
-      const ragResults = await this.aiService.findSimilar(
-        'blog',
-        currentId,
-        TARGET,
-      );
-      for (const result of ragResults) {
-        const blog = await this.blogRepository.findById(result.doc_id);
-        if (blog && blog.status === 'PUBLISHED') {
-          ragBlogs.push(blog);
+      const ragResults = await this.aiService.findSimilar('blog', currentId, 2);
+      if (ragResults.length > 0) {
+        const ids = ragResults.map((r) => r.doc_id);
+        const byId = await this.blogRepository.findManyByIds(ids);
+        const ragBlogs = byId.filter((b) => b.status === 'PUBLISHED');
+        if (ragBlogs.length >= 2) {
+          return ragBlogs.slice(0, 2);
         }
-      }
-      if (ragBlogs.length >= TARGET) {
-        return ragBlogs.slice(0, TARGET);
+        if (ragBlogs.length > 0) {
+          const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
+          const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
+          const extra = await this.blogRepository.findRelated(
+            excludeIds,
+            tagList,
+            2 - ragBlogs.length,
+          );
+          return [...ragBlogs, ...extra];
+        }
       }
     } catch (error) {
       this.logger.warn(
-        `RAG search failed, falling back to tag-based: ${error.message}`,
+        `RAG search failed, falling back to tag-based: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
-    // Fallback: rank by tag-overlap count (descending), tiebreak by recency.
-    // Avoids the old behaviour of "any blog sharing one common tag, newest first",
-    // which collapsed to "latest WRITING posts" when the current post had a generic tag.
-    const tagList = tags
-      ? tags
-          .split(',')
-          .map((t) => t.trim().toLowerCase())
-          .filter(Boolean)
-      : [];
-
-    const excludeIds = [currentId, ...ragBlogs.map((b) => b.id)];
-    const need = TARGET - ragBlogs.length;
-
-    let fillers: Blog[] = [];
+    let related: Blog[] = [];
+    const tagList = tags ? tags.split(',').map((t) => t.trim()) : [];
     if (tagList.length > 0) {
-      const candidates = await this.blogRepository.findRelated(
-        excludeIds,
-        tagList,
-        Math.max(need * 5, 10),
-      );
-      fillers = candidates
-        .map((b) => {
-          const cand = (b.tags || '')
-            .split(',')
-            .map((t) => t.trim().toLowerCase())
-            .filter(Boolean);
-          const overlap = cand.filter((t) => tagList.includes(t)).length;
-          return { blog: b, overlap };
-        })
-        .sort((a, b) => {
-          if (b.overlap !== a.overlap) return b.overlap - a.overlap;
-          return (
-            new Date(b.blog.createdAt as any).getTime() -
-            new Date(a.blog.createdAt as any).getTime()
-          );
-        })
-        .slice(0, need)
-        .map((x) => x.blog);
+      related = await this.blogRepository.findRelated([currentId], tagList, 2);
     }
-
-    return [...ragBlogs, ...fillers].slice(0, TARGET);
+    if (related.length < 2) {
+      const excludeIds = [currentId, ...related.map((b) => b.id)];
+      const recent = await this.blogRepository.findRelated(
+        excludeIds,
+        [],
+        2 - related.length,
+      );
+      related = [...related, ...recent];
+    }
+    return related;
   }
 
   async update(id: string, updateBlogDto: UpdateBlogDto): Promise<Blog> {
