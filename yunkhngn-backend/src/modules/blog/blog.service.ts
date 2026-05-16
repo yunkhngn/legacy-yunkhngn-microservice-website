@@ -75,8 +75,8 @@ export class BlogService {
     return newBlog;
   }
 
-  async findAll(limit?: number): Promise<Blog[]> {
-    return this.blogRepository.findAll(limit);
+  async findAll(limit?: number, status?: string): Promise<Blog[]> {
+    return this.blogRepository.findAll(limit, status);
   }
 
   async findOne(slugOrId: string): Promise<any> {

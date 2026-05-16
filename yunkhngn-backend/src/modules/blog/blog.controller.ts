@@ -35,8 +35,11 @@ export class BlogController {
 
   @Get()
   @ApiOperation({ summary: 'Get all blog posts' })
-  findAll(@Query('limit') limit?: number) {
-    return this.blogService.findAll(limit);
+  findAll(
+    @Query('limit') limit?: number,
+    @Query('status') status?: string,
+  ) {
+    return this.blogService.findAll(limit, status);
   }
 
   @Get(':slug')

@@ -32,3 +32,29 @@ describe('PrismaBlogRepository.findManyByIds', () => {
     expect(result.map((r) => r.id)).toEqual(['a', 'c']);
   });
 });
+
+describe('PrismaBlogRepository.findAll', () => {
+  let repo: PrismaBlogRepository;
+  let prisma: { blog: { findMany: jest.Mock } };
+
+  beforeEach(async () => {
+    prisma = { blog: { findMany: jest.fn().mockResolvedValue([]) } };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        PrismaBlogRepository,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    repo = moduleRef.get(PrismaBlogRepository);
+  });
+
+  it('filters by status when status is provided', async () => {
+    await repo.findAll(6, 'PUBLISHED');
+    expect(prisma.blog.findMany).toHaveBeenCalledWith({
+      where: { status: 'PUBLISHED' },
+      take: 6,
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+});
+
