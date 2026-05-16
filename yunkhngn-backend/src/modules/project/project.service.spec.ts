@@ -185,3 +185,56 @@ describe('ProjectService - rag-sync enqueue', () => {
     });
   });
 });
+
+describe('ProjectService.findRelatedProjects - N+1 fix', () => {
+  let service: ProjectService;
+  let projectRepository: any;
+
+  beforeEach(async () => {
+    projectRepository = {
+      findManyByIds: jest.fn(),
+      findById: jest.fn(),
+      findRelated: jest.fn().mockResolvedValue([]),
+    };
+    const { RagSyncQueue } = await import('../queue/rag-sync/rag-sync.queue');
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        ProjectService,
+        { provide: IProjectRepository, useValue: projectRepository },
+        {
+          provide: AiService,
+          useValue: {
+            findSimilar: jest
+              .fn()
+              .mockResolvedValue([{ doc_id: 'p2' }, { doc_id: 'p3' }]),
+            syncDocument: jest.fn(),
+          },
+        },
+        {
+          provide: CloudinaryService,
+          useValue: { deleteImagesSafely: jest.fn() },
+        },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
+        { provide: RagSyncQueue, useValue: { enqueue: jest.fn() } },
+      ],
+    }).compile();
+    service = moduleRef.get(ProjectService);
+  });
+
+  it('uses findManyByIds (not findById in loop) for RAG path', async () => {
+    projectRepository.findManyByIds.mockResolvedValue([
+      { id: 'p2', title: 'B' },
+      { id: 'p3', title: 'C' },
+    ]);
+    // findRelatedProjects takes a full project, not just id
+    const result = await service.findRelatedProjects({
+      id: 'p1',
+      tags: '',
+      techStack: '',
+    } as any);
+    expect(projectRepository.findManyByIds).toHaveBeenCalledWith(['p2', 'p3']);
+    expect(projectRepository.findById).not.toHaveBeenCalled();
+    expect(result.map((p) => p.id)).toEqual(['p2', 'p3']);
+  });
+});

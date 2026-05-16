@@ -113,9 +113,10 @@ export class ProjectService {
         current.id,
         TARGET,
       );
-      for (const result of ragResults) {
-        const proj = await this.projectRepository.findById(result.doc_id);
-        if (proj) ragProjects.push(proj);
+      if (ragResults.length > 0) {
+        const ids = ragResults.map((r) => r.doc_id);
+        const fetched = await this.projectRepository.findManyByIds(ids);
+        ragProjects.push(...fetched);
       }
       if (ragProjects.length >= TARGET) {
         return ragProjects.slice(0, TARGET);

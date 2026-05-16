@@ -32,6 +32,45 @@ export class PrismaProjectRepository implements IProjectRepository {
     });
   }
 
+  async findManyByIds(ids: string[]): Promise<Project[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.project.findMany({
+      where: { id: { in: ids } },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r as Project]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((p): p is Project => Boolean(p));
+  }
+
+  async findRelated(
+    excludeIds: string[],
+    tags: string[],
+    techStack: string[],
+    take: number,
+  ): Promise<Project[]> {
+    const ors: any[] = [];
+    for (const tag of tags) ors.push({ tags: { contains: tag } });
+    for (const tech of techStack) ors.push({ techStack: { contains: tech } });
+
+    if (ors.length === 0) {
+      return this.prisma.project.findMany({
+        where: { id: { notIn: excludeIds } },
+        take,
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    return this.prisma.project.findMany({
+      where: {
+        id: { notIn: excludeIds },
+        OR: ors,
+      },
+      take,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async update(id: string, data: any): Promise<Project> {
     return this.prisma.project.update({
       where: { id },
