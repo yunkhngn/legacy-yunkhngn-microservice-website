@@ -41,3 +41,10 @@ import { NewsletterProcessor } from './newsletter/newsletter.processor';
   exports: [BullModule, RagSyncQueue, NewsletterQueue],
 })
 export class QueueModule {}
+
+import { getQueueToken } from '@nestjs/bullmq';
+
+export const QUEUE_TOKENS = {
+  newsletter: getQueueToken('newsletter'),
+  ragSync: getQueueToken('rag-sync'),
+};

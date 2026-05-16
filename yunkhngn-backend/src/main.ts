@@ -5,6 +5,12 @@ import { AppModule } from './app.module';
 import * as admin from 'firebase-admin';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
+import { Queue } from 'bullmq';
+import {
+  createBullBoardRouter,
+  BULL_BOARD_BASE_PATH,
+} from './modules/queue/bull-board/bull-board.middleware';
+import { QUEUE_TOKENS } from './modules/queue/queue.module';
 
 dotenv.config();
 
@@ -68,6 +74,11 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  const newsletter = app.get<Queue>(QUEUE_TOKENS.newsletter);
+  const ragSync = app.get<Queue>(QUEUE_TOKENS.ragSync);
+  const bullBoardRouter = createBullBoardRouter([newsletter, ragSync]);
+  app.use(BULL_BOARD_BASE_PATH, bullBoardRouter);
 
   await app.listen(process.env.PORT ?? 3001);
 }
