@@ -22,5 +22,10 @@ api.yunkhngn.dev {
         header_regexp User-Agent (?i)(nikto|sqlmap|nmap|dirsearch|gobuster|masscan|zgrab|nuclei|httpie|curl/|python-requests|go-http-client|java/|nessus|openvas|acunetix|burpsuite|wpscan|semrush|ahref)
     }
     respond @blocked_agents 403
+    @bull_board path /admin/queues /admin/queues/*
+    basicauth @bull_board {
+        admin $2b$14$nqu3hpnbbKPXgBn3B59zWeIgUNVQEsDnTaEVsNNscaG.N9I7wXX7y
+    }
+    
     reverse_proxy backend:3001
 }
