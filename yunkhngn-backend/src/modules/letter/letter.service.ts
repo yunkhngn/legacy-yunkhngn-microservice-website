@@ -13,6 +13,8 @@ import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { Letter } from './domain/letter.entity';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class LetterService {
@@ -22,6 +24,7 @@ export class LetterService {
     @Inject(ILetterRepository)
     private readonly letterRepository: ILetterRepository,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   private stripSensitive(letter: Letter) {
@@ -84,6 +87,13 @@ export class LetterService {
         this.logger.error('Letter processing trigger failed', err.stack),
       );
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_LETTER,
+      entity: AuditEntity.LETTER,
+      entityId: letter.id,
+      details: { code: letter.code, title: letter.title },
+    });
 
     return this.stripSensitive(letter);
   }
@@ -258,6 +268,13 @@ export class LetterService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_LETTER,
+      entity: AuditEntity.LETTER,
+      entityId: id,
+      details: dto as Record<string, unknown>,
+    });
+
     return this.stripSensitive(letter);
   }
 
@@ -277,6 +294,13 @@ export class LetterService {
     if (imagesToDelete.length > 0) {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_LETTER,
+      entity: AuditEntity.LETTER,
+      entityId: id,
+      details: { id },
+    });
 
     return deleted;
   }

@@ -13,6 +13,8 @@ import { Setting } from './domain/setting.entity';
 import { AiService } from '../ai/ai.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 const SYSTEM_SETTINGS_MAP: Record<
   string,
@@ -132,6 +134,7 @@ export class SettingsService implements OnModuleInit {
     @Inject(forwardRef(() => AiService))
     private readonly aiService: AiService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly auditLogsService: AuditLogsService,
   ) {
     this.logger = new Logger(SettingsService.name);
   }
@@ -329,6 +332,14 @@ export class SettingsService implements OnModuleInit {
           isSystem,
           isPublic,
         );
+
+      void this.auditLogsService.log({
+        action: settingTitle === 'ai_persona' ? AuditAction.UPDATE_AI_PERSONA : AuditAction.UPDATE_SETTINGS,
+        entity: settingTitle === 'ai_persona' ? AuditEntity.AI_PERSONA : AuditEntity.SETTINGS,
+        entityId: updated.id.toString(),
+        details: { settingTitle, isSensitive, isSystem, isPublic, group, sortOrder },
+      });
+
       return updated;
     }
 
@@ -365,6 +376,21 @@ export class SettingsService implements OnModuleInit {
         title: settingTitle,
       });
     }
+
+    void this.auditLogsService.log({
+      action: settingTitle === 'ai_persona' ? AuditAction.UPDATE_AI_PERSONA : AuditAction.UPDATE_SETTINGS,
+      entity: settingTitle === 'ai_persona' ? AuditEntity.AI_PERSONA : AuditEntity.SETTINGS,
+      entityId: updatedSetting.id.toString(),
+      details: {
+        settingTitle,
+        isSensitive,
+        isSystem,
+        isPublic,
+        group,
+        sortOrder,
+        content: isSensitive ? '[REDACTED]' : content,
+      },
+    });
 
     return updatedSetting;
   }

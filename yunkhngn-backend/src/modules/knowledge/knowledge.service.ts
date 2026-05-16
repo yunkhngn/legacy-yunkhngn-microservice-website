@@ -4,6 +4,8 @@ import { KnowledgeEntry } from './domain/knowledge.entity';
 import { CreateKnowledgeDto } from './dto/create-knowledge.dto';
 import { UpdateKnowledgeDto } from './dto/update-knowledge.dto';
 import { AiService } from '../ai/ai.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class KnowledgeService {
@@ -13,6 +15,7 @@ export class KnowledgeService {
     @Inject(IKnowledgeRepository)
     private readonly knowledgeRepository: IKnowledgeRepository,
     private readonly aiService: AiService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async create(dto: CreateKnowledgeDto): Promise<KnowledgeEntry> {
@@ -24,6 +27,13 @@ export class KnowledgeService {
 
     // Sync to vector DB
     await this.syncToRag(entry);
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_KNOWLEDGE,
+      entity: AuditEntity.KNOWLEDGE,
+      entityId: entry.id,
+      details: { title: entry.title, category: entry.category },
+    });
 
     return entry;
   }
@@ -46,6 +56,13 @@ export class KnowledgeService {
     // Re-sync to vector DB
     await this.syncToRag(entry);
 
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_KNOWLEDGE,
+      entity: AuditEntity.KNOWLEDGE,
+      entityId: entry.id,
+      details: dto as Record<string, unknown>,
+    });
+
     return entry;
   }
 
@@ -60,6 +77,13 @@ export class KnowledgeService {
         `Failed to delete knowledge ${id} from RAG: ${error.message}`,
       );
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_KNOWLEDGE,
+      entity: AuditEntity.KNOWLEDGE,
+      entityId: id,
+      details: { id },
+    });
 
     return entry;
   }

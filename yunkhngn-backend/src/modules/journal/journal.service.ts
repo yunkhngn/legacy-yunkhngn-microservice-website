@@ -4,6 +4,8 @@ import { UpdateJournalDto } from './dto/update-journal.dto';
 import { IJournalRepository } from './domain/journal.repository.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class JournalService {
@@ -14,7 +16,8 @@ export class JournalService {
     private readonly journalRepository: IJournalRepository,
     private readonly notificationsService: NotificationsService,
     private readonly cloudinaryService: CloudinaryService,
-  ) {}
+    private readonly auditLogsService: AuditLogsService,
+  ) { }
 
   async create(createJournalDto: CreateJournalDto) {
     const { tags, ...rest } = createJournalDto;
@@ -27,6 +30,14 @@ export class JournalService {
 
     this.logger.log('Creating new journal entry');
     const journal = await this.journalRepository.create(data);
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_JOURNAL,
+      entity: AuditEntity.JOURNAL,
+      entityId: journal.id,
+      details: { mood: journal.mood, content: journal.content?.substring(0, 50) },
+    });
+
     return this.formatEntry(journal);
   }
 
@@ -84,6 +95,13 @@ export class JournalService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_JOURNAL,
+      entity: AuditEntity.JOURNAL,
+      entityId: id,
+      details: updateJournalDto as Record<string, unknown>,
+    });
+
     return this.formatEntry(entry);
   }
 
@@ -108,6 +126,14 @@ export class JournalService {
         // Ignore parse errors
       }
     }
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_JOURNAL,
+      entity: AuditEntity.JOURNAL,
+      entityId: id,
+      details: { id },
+    });
+
     return deleted;
   }
 
@@ -130,7 +156,7 @@ export class JournalService {
             `New ${type} reaction on journal entry`,
             `/journal#journal-${journalId}`,
           )
-          .catch(() => {});
+          .catch(() => { });
 
         return { action: 'updated', type };
       }

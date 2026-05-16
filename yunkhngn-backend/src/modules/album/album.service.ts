@@ -11,6 +11,8 @@ import { UpdateAlbumDto } from './dto/update-album.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Album } from './domain/album.entity';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction, AuditEntity } from '../audit-logs/domain/audit-log.types';
 
 @Injectable()
 export class AlbumService {
@@ -20,6 +22,7 @@ export class AlbumService {
     @Inject(IAlbumRepository)
     private readonly albumRepository: IAlbumRepository,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   private generateSlug(name: string): string {
@@ -45,6 +48,14 @@ export class AlbumService {
       coverPhotoId: dto.coverPhotoId,
     });
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.CREATE_ALBUM,
+      entity: AuditEntity.ALBUM,
+      entityId: result.id,
+      details: { name: result.name, slug: result.slug },
+    });
+
     return result;
   }
 
@@ -81,6 +92,14 @@ export class AlbumService {
       slug: dto.slug || (dto.name ? this.generateSlug(dto.name) : undefined),
     });
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.UPDATE_ALBUM,
+      entity: AuditEntity.ALBUM,
+      entityId: id,
+      details: dto as Record<string, unknown>,
+    });
+
     return result;
   }
 
@@ -96,6 +115,14 @@ export class AlbumService {
 
     const result = await this.albumRepository.delete(id);
     await this.cacheManager.del('admin_dashboard_stats');
+
+    void this.auditLogsService.log({
+      action: AuditAction.DELETE_ALBUM,
+      entity: AuditEntity.ALBUM,
+      entityId: id,
+      details: { id },
+    });
+
     return result;
   }
 }
