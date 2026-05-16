@@ -5,6 +5,7 @@ import { NewsletterService } from '../../integrations/newsletter/newsletter.serv
 import { NewsletterQueue } from './newsletter.queue';
 import { IBlogRepository } from '../../blog/domain/blog.repository.interface';
 import { IProjectRepository } from '../../project/domain/project.repository.interface';
+import { SettingsService } from '../../settings/settings.service';
 import {
   NEWSLETTER_QUEUE,
   NEWSLETTER_JOB_ANNOUNCE,
@@ -22,6 +23,7 @@ export class NewsletterProcessor extends WorkerHost {
     @Inject(IProjectRepository) private readonly projectRepository: IProjectRepository,
     private readonly newsletterService: NewsletterService,
     private readonly newsletterQueue: NewsletterQueue,
+    private readonly settingsService: SettingsService,
   ) {
     super();
   }
@@ -39,6 +41,16 @@ export class NewsletterProcessor extends WorkerHost {
   private async handleAnnounce(payload: AnnouncePayload, job: Job) {
     const entityId = payload.entityId || payload.blogId;
     const entityType = payload.entityType || 'blog';
+
+    // Check if auto-send is enabled for this entity type
+    const settingKey = entityType === 'blog' ? 'newsletter_auto_blog' : 'newsletter_auto_project';
+    const autoSendSetting = await this.settingsService.getDecryptedSetting(settingKey);
+    if (autoSendSetting === 'false') {
+      this.logger.log(
+        `[${job.id}] announce skipped — auto-send disabled for ${entityType} (${settingKey}=false)`,
+      );
+      return;
+    }
 
     if (entityType === 'blog') {
       const blog = await this.blogRepository.findById(entityId);
