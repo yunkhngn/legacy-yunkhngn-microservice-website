@@ -290,7 +290,10 @@ describe('BlogService - newsletter announce enqueue', () => {
         { provide: ConfigService, useValue: { get: () => 'http://x' } },
         {
           provide: AiService,
-          useValue: { syncDocument: jest.fn(), findSimilar: jest.fn().mockResolvedValue([]) },
+          useValue: {
+            syncDocument: jest.fn(),
+            findSimilar: jest.fn().mockResolvedValue([]),
+          },
         },
         {
           provide: CloudinaryService,
