@@ -1,35 +1,117 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import * as si from 'systeminformation';
 
+type Snapshot = {
+  cpu: si.Systeminformation.CpuData | null;
+  mem: si.Systeminformation.MemData | null;
+  osInfo: si.Systeminformation.OsData | null;
+  currentLoad: si.Systeminformation.CurrentLoadData | null;
+  fsSize: si.Systeminformation.FsSizeData[];
+  time: ReturnType<typeof si.time> | null;
+};
+
+const DYNAMIC_INTERVAL_MS = 10_000;
+const FS_INTERVAL_MS = 60_000;
+
 @Injectable()
-export class SystemService {
+export class SystemService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(SystemService.name);
+
+  private snapshot: Snapshot = {
+    cpu: null,
+    mem: null,
+    osInfo: null,
+    currentLoad: null,
+    fsSize: [],
+    time: null,
+  };
+
+  private dynamicTimer: NodeJS.Timeout | null = null;
+  private fsTimer: NodeJS.Timeout | null = null;
+  private samplingDynamic = false;
+  private samplingFs = false;
+  private lastFsSampleAt = 0;
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStats() {
+  async onModuleInit() {
+    // Static info: only sample once at startup. CPU model and OS info don't
+    // change at runtime, so there's no reason to re-query them.
     try {
-      const [cpu, mem, osInfo, currentLoad, fsSize] = await Promise.all([
-        si.cpu(),
-        si.mem(),
-        si.osInfo(),
-        si.currentLoad(),
-        si.fsSize(),
-      ]);
-
-      const time = si.time();
-
-      return {
-        cpu,
-        mem,
-        osInfo,
-        currentLoad,
-        fsSize,
-        time,
-      };
-    } catch (error) {
-      console.error('Error fetching system stats:', error);
-      throw error;
+      const [cpu, osInfo] = await Promise.all([si.cpu(), si.osInfo()]);
+      this.snapshot.cpu = cpu;
+      this.snapshot.osInfo = osInfo;
+    } catch (err) {
+      this.logger.error('Failed to sample static system info', err as Error);
     }
+
+    // Prime dynamic snapshot once so the first request after boot has data.
+    await this.sampleDynamic();
+    await this.sampleFs();
+
+    this.dynamicTimer = setInterval(
+      () => void this.sampleDynamic(),
+      DYNAMIC_INTERVAL_MS,
+    );
+    this.fsTimer = setInterval(
+      () => void this.sampleFs(),
+      FS_INTERVAL_MS,
+    );
+  }
+
+  onModuleDestroy() {
+    if (this.dynamicTimer) clearInterval(this.dynamicTimer);
+    if (this.fsTimer) clearInterval(this.fsTimer);
+  }
+
+  private async sampleDynamic() {
+    if (this.samplingDynamic) return;
+    this.samplingDynamic = true;
+    try {
+      const [mem, currentLoad] = await Promise.all([
+        si.mem(),
+        si.currentLoad(),
+      ]);
+      this.snapshot.mem = mem;
+      this.snapshot.currentLoad = currentLoad;
+      this.snapshot.time = si.time();
+    } catch (err) {
+      this.logger.warn(
+        `Dynamic system sample failed: ${(err as Error).message}`,
+      );
+    } finally {
+      this.samplingDynamic = false;
+    }
+  }
+
+  private async sampleFs() {
+    if (this.samplingFs) return;
+    this.samplingFs = true;
+    try {
+      this.snapshot.fsSize = await si.fsSize();
+      this.lastFsSampleAt = Date.now();
+    } catch (err) {
+      this.logger.warn(`fsSize sample failed: ${(err as Error).message}`);
+    } finally {
+      this.samplingFs = false;
+    }
+  }
+
+  getStats() {
+    return {
+      cpu: this.snapshot.cpu,
+      mem: this.snapshot.mem,
+      osInfo: this.snapshot.osInfo,
+      currentLoad: this.snapshot.currentLoad,
+      fsSize: this.snapshot.fsSize,
+      time: this.snapshot.time ?? si.time(),
+    };
   }
 
   async getDashboardStats() {

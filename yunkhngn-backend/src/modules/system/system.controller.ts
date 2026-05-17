@@ -11,12 +11,9 @@ export class SystemController {
 
   @Get('stats')
   @ApiBearerAuth()
-  @UseInterceptors(CacheInterceptor)
-  @CacheKey('system_stats')
-  @CacheTTL(15)
   @ApiOperation({ summary: 'Get system-wide statistics' })
   @UseGuards(FirebaseAuthGuard)
-  async getStats() {
+  getStats() {
     return this.systemService.getStats();
   }
 
