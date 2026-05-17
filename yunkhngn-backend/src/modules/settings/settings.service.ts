@@ -120,6 +120,22 @@ const SYSTEM_SETTINGS_MAP: Record<
     public: ['ai_persona', 'chat_forbidden_words'],
     sortOrder: 10,
   },
+  WakaTime: {
+    keys: ['wakatime_api_key'],
+    sensitive: ['wakatime_api_key'],
+    sortOrder: 11,
+  },
+  Steam: {
+    keys: ['steam_api_key', 'steam_user_id'],
+    sensitive: ['steam_api_key'],
+    public: ['steam_user_id'],
+    sortOrder: 12,
+  },
+  Weather: {
+    keys: ['openweather_api_key'],
+    sensitive: ['openweather_api_key'],
+    sortOrder: 13,
+  },
   Other: {
     keys: ['journal_moods'],
     public: ['journal_moods'],
