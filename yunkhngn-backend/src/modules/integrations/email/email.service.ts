@@ -173,11 +173,17 @@ export class EmailService implements OnModuleInit {
   async sendWelcomeEmail(to: string, unsubscribeLink: string) {
     try {
       if (!this.resend) await this.initResend();
-      if (!this.resend) return null;
+      if (!this.resend) {
+        throw new Error('Resend client is not initialized. Please configure resend_api_key in Settings.');
+      }
 
       const resendDomain =
         (await this.settingsService.getDecryptedSetting('resend_domain')) ||
         process.env.RESEND_DOMAIN;
+
+      if (!resendDomain) {
+        throw new Error('Resend domain is not configured. Please configure resend_domain in Settings.');
+      }
 
       const html = getWelcomeTemplate(unsubscribeLink);
 
@@ -189,13 +195,12 @@ export class EmailService implements OnModuleInit {
       });
 
       if (error) {
-        this.logger.error('Failed to send welcome email:', error);
-        return null;
+        throw new Error(`Resend API error: ${JSON.stringify(error)}`);
       }
       return data;
     } catch (error) {
-      this.logger.error('Error sending welcome email:', error.stack);
-      return null;
+      this.logger.error('Error sending welcome email:', error.stack || error.message);
+      throw error;
     }
   }
 
@@ -207,11 +212,17 @@ export class EmailService implements OnModuleInit {
   ) {
     try {
       if (!this.resend) await this.initResend();
-      if (!this.resend) return null;
+      if (!this.resend) {
+        throw new Error('Resend client is not initialized. Please configure resend_api_key in Settings.');
+      }
 
       const resendDomain =
         (await this.settingsService.getDecryptedSetting('resend_domain')) ||
         process.env.RESEND_DOMAIN;
+
+      if (!resendDomain) {
+        throw new Error('Resend domain is not configured. Please configure resend_domain in Settings.');
+      }
 
       const html = getNewsletterTemplate(content, unsubscribeLink);
 
@@ -223,13 +234,12 @@ export class EmailService implements OnModuleInit {
       });
 
       if (error) {
-        this.logger.error('Failed to send newsletter email:', error);
-        return null;
+        throw new Error(`Resend API error: ${JSON.stringify(error)}`);
       }
       return data;
     } catch (error) {
-      this.logger.error('Error sending newsletter email:', error.stack);
-      return null;
+      this.logger.error('Error sending newsletter email:', error.stack || error.message);
+      throw error;
     }
   }
 }

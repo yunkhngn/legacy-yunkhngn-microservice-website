@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import { ISubscriberRepository } from './domain/subscriber.repository.interface';
 import { EmailService } from '../email/email.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -161,20 +161,35 @@ export class NewsletterService {
     return { message: 'Successfully deleted subscriber' };
   }
 
-  // Kept for backwards compatibility with blog.service.ts until Task 12 replaces it.
   async sendToAll(subject: string, content: string) {
     const subscribers = await this.repository.findAll();
     if (subscribers.length === 0) return { sent: 0 };
-    for (const subscriber of subscribers) {
-      const unsubscribeLink = this.unsubscribeUrl(subscriber.token ?? '');
-      this.emailService
-        .sendNewsletter(subscriber.email, subject, content, unsubscribeLink)
-        .catch((err) =>
-          this.logger.error(
-            `Failed to send newsletter to ${subscriber.email}`,
-            err,
-          ),
+
+    const errors: string[] = [];
+    const promises = subscribers.map(async (subscriber) => {
+      try {
+        const unsubscribeLink = this.unsubscribeUrl(subscriber.token ?? '');
+        await this.emailService.sendNewsletter(
+          subscriber.email,
+          subject,
+          content,
+          unsubscribeLink,
         );
+      } catch (err) {
+        this.logger.error(
+          `Failed to send newsletter to ${subscriber.email}`,
+          err.stack || err.message,
+        );
+        errors.push(`${subscriber.email}: ${err.message}`);
+      }
+    });
+
+    await Promise.all(promises);
+
+    if (errors.length > 0) {
+      throw new BadRequestException(
+        `Failed to send newsletter: ${errors.join(', ')}`,
+      );
     }
 
     void this.auditLogsService.log({
