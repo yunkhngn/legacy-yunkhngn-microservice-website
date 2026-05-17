@@ -53,6 +53,9 @@ import { CloudflareModule } from './modules/integrations/cloudflare/cloudflare.m
 import { GithubModule } from './modules/integrations/github/github.module';
 import { LastFmModule } from './modules/integrations/lastfm/lastfm.module';
 import { NewsletterModule } from './modules/integrations/newsletter/newsletter.module';
+import { WakaTimeModule } from './modules/integrations/wakatime/wakatime.module';
+import { SteamModule } from './modules/integrations/steam/steam.module';
+import { WeatherModule } from './modules/integrations/weather/weather.module';
 
 import { HealthController } from './modules/health/health.controller';
 
@@ -102,6 +105,9 @@ import { HealthController } from './modules/health/health.controller';
     ShortlinkModule,
     JournalModule,
     LastFmModule,
+    WakaTimeModule,
+    SteamModule,
+    WeatherModule,
     LetterModule,
     MonitorModule,
     ChatLogsModule,
