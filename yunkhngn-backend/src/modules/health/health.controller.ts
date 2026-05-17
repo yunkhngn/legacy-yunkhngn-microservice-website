@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { SettingsService } from '../settings/settings.service';
 
 @ApiTags('Health')
@@ -8,6 +9,9 @@ export class HealthController {
   constructor(private settingsService: SettingsService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('health_check')
+  @CacheTTL(30)
   @ApiOperation({ summary: 'Health check endpoint' })
   async check() {
     const cloudName =
