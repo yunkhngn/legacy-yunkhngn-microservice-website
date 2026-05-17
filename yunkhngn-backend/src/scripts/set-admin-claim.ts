@@ -29,13 +29,13 @@ async function initFirebase() {
   } else if (fs.existsSync(credentials)) {
     serviceAccount = JSON.parse(fs.readFileSync(credentials, 'utf8'));
   }
-  if (serviceAccount) {
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    console.log('Firebase Admin initialized with credentials.');
-  } else {
-    admin.initializeApp();
-    console.log('Firebase Admin initialized with default credentials.');
+  if (!serviceAccount) {
+    throw new Error(
+      `FIREBASE_CREDENTIALS is set but could not be parsed. Value must be either inline service-account JSON or a path to a service-account JSON file. Got: ${credentials.slice(0, 60)}...`,
+    );
   }
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  console.log('Firebase Admin initialized with credentials.');
 }
 
 async function main() {
@@ -62,8 +62,8 @@ async function main() {
   await admin.app().delete();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
-  prisma.$disconnect();
+  await prisma.$disconnect().catch(() => {});
   process.exit(1);
 });

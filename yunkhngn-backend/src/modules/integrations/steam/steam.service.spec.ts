@@ -34,8 +34,26 @@ describe('SteamService', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
 
-  it('returns null when key or user id is missing', async () => {
+  it('returns null when both key and user id are missing', async () => {
     expect(await service.getNowPlaying()).toBeNull();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns null when only the API key is missing', async () => {
+    // Settings: first lookup (api key) → null, second lookup (user id) → present
+    settings.getDecryptedSetting
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce('76561198000000000');
+    expect(await service.getNowPlaying()).toBeNull();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns null when only the user id is missing', async () => {
+    settings.getDecryptedSetting
+      .mockResolvedValueOnce('steam-key')
+      .mockResolvedValueOnce(null);
+    expect(await service.getNowPlaying()).toBeNull();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('returns game name when player is in-game', async () => {
