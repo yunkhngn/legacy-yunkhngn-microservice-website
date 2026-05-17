@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { SettingsService } from '../../settings/settings.service';
 import {
@@ -10,39 +10,28 @@ import {
 } from './templates';
 
 @Injectable()
-export class EmailService implements OnModuleInit {
+export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: Resend;
 
   constructor(private readonly settingsService: SettingsService) {}
 
-  async onModuleInit() {
-    await this.initResend();
-  }
+  private async getResendClient(): Promise<Resend> {
+    const apiKey =
+      (await this.settingsService.getDecryptedSetting('resend_api_key')) ||
+      process.env.RESEND_API_KEY;
 
-  private async initResend() {
-    try {
-      const apiKey =
-        (await this.settingsService.getDecryptedSetting('resend_api_key')) ||
-        process.env.RESEND_API_KEY;
-
-      if (!apiKey) {
-        this.logger.warn(
-          'Resend API key not found. Email service may not work.',
-        );
-        return;
-      }
-
-      this.resend = new Resend(apiKey);
-    } catch (error) {
-      this.logger.error('Failed to initialize Resend client:', error.stack);
+    if (!apiKey) {
+      throw new Error(
+        'Resend API key is not configured. Please configure resend_api_key in Settings.',
+      );
     }
+
+    return new Resend(apiKey);
   }
 
   async sendContactNotification(contact: any) {
     try {
-      if (!this.resend) await this.initResend();
-      if (!this.resend) return null;
+      const resend = await this.getResendClient();
 
       const adminEmail =
         (await this.settingsService.getDecryptedSetting('admin_email')) ||
@@ -64,7 +53,7 @@ export class EmailService implements OnModuleInit {
         adminUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/contact`,
       });
 
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: `Website Contact <noreply@${resendDomain}>`,
         to: adminEmail,
         subject: `New Contact: ${contact.subject}`,
@@ -78,15 +67,14 @@ export class EmailService implements OnModuleInit {
 
       return data;
     } catch (error) {
-      this.logger.error('Error sending notification email:', error.stack);
+      this.logger.error('Error sending notification email:', error.stack || error.message);
       return null;
     }
   }
 
   async sendContactResponse(contact: any, response: string) {
     try {
-      if (!this.resend) await this.initResend();
-      if (!this.resend) return null;
+      const resend = await this.getResendClient();
 
       const adminEmail =
         (await this.settingsService.getDecryptedSetting('admin_email')) ||
@@ -103,7 +91,7 @@ export class EmailService implements OnModuleInit {
         originalMessage: contact.message.replace(/\n/g, '<br>'),
       });
 
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: `Khoa Nguyen <noreply@${resendDomain}>`,
         to: contact.email,
         replyTo: adminEmail,
@@ -118,7 +106,7 @@ export class EmailService implements OnModuleInit {
 
       return data;
     } catch (error) {
-      this.logger.error('Error sending response email:', error.stack);
+      this.logger.error('Error sending response email:', error.stack || error.message);
       return null;
     }
   }
@@ -131,8 +119,7 @@ export class EmailService implements OnModuleInit {
     salutation: string = 'Hi',
   ) {
     try {
-      if (!this.resend) await this.initResend();
-      if (!this.resend) return null;
+      const resend = await this.getResendClient();
 
       const adminEmail =
         (await this.settingsService.getDecryptedSetting('admin_email')) ||
@@ -149,7 +136,7 @@ export class EmailService implements OnModuleInit {
         salutation,
       });
 
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: `Khoa Nguyen <noreply@${resendDomain}>`,
         to,
         bcc: adminEmail,
@@ -165,17 +152,14 @@ export class EmailService implements OnModuleInit {
 
       return data;
     } catch (error) {
-      this.logger.error('Error sending custom email:', error.stack);
+      this.logger.error('Error sending custom email:', error.stack || error.message);
       return null;
     }
   }
 
   async sendWelcomeEmail(to: string, unsubscribeLink: string) {
     try {
-      if (!this.resend) await this.initResend();
-      if (!this.resend) {
-        throw new Error('Resend client is not initialized. Please configure resend_api_key in Settings.');
-      }
+      const resend = await this.getResendClient();
 
       const resendDomain =
         (await this.settingsService.getDecryptedSetting('resend_domain')) ||
@@ -187,7 +171,7 @@ export class EmailService implements OnModuleInit {
 
       const html = getWelcomeTemplate(unsubscribeLink);
 
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: `Khoa Nguyen <noreply@${resendDomain}>`,
         to,
         subject: 'Welcome to my Newsletter!',
@@ -211,10 +195,7 @@ export class EmailService implements OnModuleInit {
     unsubscribeLink: string,
   ) {
     try {
-      if (!this.resend) await this.initResend();
-      if (!this.resend) {
-        throw new Error('Resend client is not initialized. Please configure resend_api_key in Settings.');
-      }
+      const resend = await this.getResendClient();
 
       const resendDomain =
         (await this.settingsService.getDecryptedSetting('resend_domain')) ||
@@ -226,7 +207,7 @@ export class EmailService implements OnModuleInit {
 
       const html = getNewsletterTemplate(content, unsubscribeLink);
 
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: `Khoa Nguyen <noreply@${resendDomain}>`,
         to,
         subject,
