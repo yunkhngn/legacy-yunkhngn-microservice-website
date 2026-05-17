@@ -329,6 +329,7 @@ export class SettingsService implements OnModuleInit {
 
     this.logger.log(`Updating setting: ${settingTitle}`);
     await this.cacheManager.del('public_settings');
+    await this.cacheManager.del(this.decryptedSettingCacheKey(settingTitle));
 
     // If content is undefined (masked sensitive), only update metadata without touching content
     if (content === undefined) {
@@ -427,17 +428,41 @@ export class SettingsService implements OnModuleInit {
     return this.settingsRepository.delete(id);
   }
 
-  async getDecryptedSetting(title: string) {
+  private decryptedSettingCacheKey(title: string) {
+    return `decrypted_setting:${title}`;
+  }
+
+  async getDecryptedSetting(title: string): Promise<string | null> {
+    const cacheKey = this.decryptedSettingCacheKey(title);
+
+    try {
+      const cached = await this.cacheManager.get<string>(cacheKey);
+      if (cached !== undefined && cached !== null) {
+        // We cache the empty string as a sentinel for "no value" so we don't
+        // re-query the DB for missing settings on every request.
+        return cached === '' ? null : cached;
+      }
+    } catch {
+      // Cache backend unavailable — fall through to DB.
+    }
+
     try {
       const setting = await this.settingsRepository.findByTitle(title);
 
-      if (!setting || !setting.content) return null;
-
-      if (setting.isSensitive) {
-        return this.encryptionService.decrypt(setting.content);
+      let value: string | null = null;
+      if (setting?.content) {
+        value = setting.isSensitive
+          ? this.encryptionService.decrypt(setting.content)
+          : setting.content;
       }
 
-      return setting.content;
+      try {
+        await this.cacheManager.set(cacheKey, value ?? '', 300);
+      } catch {
+        // Best-effort cache write.
+      }
+
+      return value;
     } catch (error) {
       this.logger?.warn(
         `Failed to fetch and decrypt setting: ${title}`,
@@ -470,6 +495,7 @@ export class SettingsService implements OnModuleInit {
       1001,
       true,
     );
+    await this.cacheManager.del(this.decryptedSettingCacheKey('gemini_api_keys'));
   }
 
   async getRandomApiKey() {

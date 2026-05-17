@@ -26,8 +26,7 @@ export class PrismaBlogRepository implements IBlogRepository {
       where: {
         OR: [{ slug: slugOrId }, { id: slugOrId }],
       },
-      include: { comments: true },
-    }) as any;
+    });
   }
 
   findBySlug(slug: string): Promise<Blog | null> {
