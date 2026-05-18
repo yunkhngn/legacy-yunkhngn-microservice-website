@@ -30,8 +30,11 @@ async function initFirebase() {
     serviceAccount = JSON.parse(fs.readFileSync(credentials, 'utf8'));
   }
   if (!serviceAccount) {
+    const hint = credentials.startsWith('{')
+      ? `inline JSON (${credentials.length} chars)`
+      : `path '${credentials}' (not found on disk)`;
     throw new Error(
-      `FIREBASE_CREDENTIALS is set but could not be parsed. Value must be either inline service-account JSON or a path to a service-account JSON file. Got: ${credentials.slice(0, 60)}...`,
+      `FIREBASE_CREDENTIALS is set but could not be parsed. Value must be either inline service-account JSON or a path to a service-account JSON file. Got: ${hint}`,
     );
   }
   admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
@@ -50,9 +53,17 @@ async function main() {
   });
   console.log(`Found ${admins.length} admin user(s)`);
 
+  let failed = 0;
   for (const u of admins) {
-    await admin.auth().setCustomUserClaims(u.uid, { admin: true });
-    console.log(`✅ Set admin claim on ${u.email} (uid=${u.uid})`);
+    try {
+      await admin.auth().setCustomUserClaims(u.uid, { admin: true });
+      console.log(`✅ Set admin claim on ${u.email} (uid=${u.uid})`);
+    } catch (err) {
+      failed += 1;
+      console.error(
+        `❌ Failed to set claim on ${u.email} (uid=${u.uid}): ${(err as Error).message}`,
+      );
+    }
   }
 
   console.log(
@@ -60,6 +71,7 @@ async function main() {
   );
   await prisma.$disconnect();
   await admin.app().delete();
+  if (failed > 0) process.exit(1);
 }
 
 main().catch(async (err) => {
