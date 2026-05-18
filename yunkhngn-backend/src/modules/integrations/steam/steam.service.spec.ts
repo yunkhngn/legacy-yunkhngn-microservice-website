@@ -40,7 +40,6 @@ describe('SteamService', () => {
   });
 
   it('returns null when only the API key is missing', async () => {
-    // Settings: first lookup (api key) → null, second lookup (user id) → present
     settings.getDecryptedSetting
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce('76561198000000000');
@@ -56,35 +55,86 @@ describe('SteamService', () => {
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
-  it('returns game name when player is in-game', async () => {
+  it('returns cached value without hitting the API', async () => {
+    cache.get.mockResolvedValue({
+      name: 'Cached Game',
+      is_playing_now: false,
+      playtime_2weeks_minutes: 120,
+    });
+    const result = await service.getNowPlaying();
+    expect(result?.name).toBe('Cached Game');
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns active game when player is in-game', async () => {
     settings.getDecryptedSetting
       .mockResolvedValueOnce('steam-key')
       .mockResolvedValueOnce('76561198000000000');
     mockedAxios.get.mockResolvedValue({
       data: {
         response: {
-          players: [
-            { gameextrainfo: 'Counter-Strike 2', gameid: '730' },
-          ],
+          players: [{ gameextrainfo: 'Counter-Strike 2', gameid: '730' }],
         },
       },
     });
     const result = await service.getNowPlaying();
-    expect(result).toEqual({ name: 'Counter-Strike 2', app_id: 730 });
-    expect(cache.set).toHaveBeenCalledWith('steam_now_playing', expect.any(Object), 60);
+    expect(result).toEqual({
+      name: 'Counter-Strike 2',
+      app_id: 730,
+      is_playing_now: true,
+    });
+    expect(cache.set).toHaveBeenCalledWith(
+      'steam_now_playing',
+      expect.any(Object),
+      60,
+    );
   });
 
-  it('returns null when player is not in-game', async () => {
+  it('falls back to recent game when not in-game', async () => {
     settings.getDecryptedSetting
       .mockResolvedValueOnce('steam-key')
       .mockResolvedValueOnce('76561198000000000');
-    mockedAxios.get.mockResolvedValue({
-      data: { response: { players: [{ personaname: 'yunkhngn' }] } },
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('GetPlayerSummaries')) {
+        return Promise.resolve({
+          data: { response: { players: [{ personaname: 'yunkhngn' }] } },
+        });
+      }
+      return Promise.resolve({
+        data: {
+          response: {
+            games: [
+              { name: 'Counter-Strike 2', appid: 730, playtime_2weeks: 200 },
+            ],
+          },
+        },
+      });
+    });
+    const result = await service.getNowPlaying();
+    expect(result).toEqual({
+      name: 'Counter-Strike 2',
+      app_id: 730,
+      is_playing_now: false,
+      playtime_2weeks_minutes: 200,
+    });
+  });
+
+  it('returns null when not in-game and no recent games', async () => {
+    settings.getDecryptedSetting
+      .mockResolvedValueOnce('steam-key')
+      .mockResolvedValueOnce('76561198000000000');
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('GetPlayerSummaries')) {
+        return Promise.resolve({
+          data: { response: { players: [{ personaname: 'yunkhngn' }] } },
+        });
+      }
+      return Promise.resolve({ data: { response: { games: [] } } });
     });
     expect(await service.getNowPlaying()).toBeNull();
   });
 
-  it('returns null on API error', async () => {
+  it('returns null on summaries API error', async () => {
     settings.getDecryptedSetting
       .mockResolvedValueOnce('steam-key')
       .mockResolvedValueOnce('76561198000000000');

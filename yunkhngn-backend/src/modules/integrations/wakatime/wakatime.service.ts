@@ -9,7 +9,12 @@ export interface WakaTimeToday {
   text: string;
   total_seconds: number;
   top_language: string | null;
+  is_coding_now: boolean;
+  last_heartbeat_at: string | null;
 }
+
+const ACTIVE_THRESHOLD_MS = 5 * 60 * 1000;
+const CACHE_TTL_SECONDS = 60;
 
 @Injectable()
 export class WakaTimeService {
@@ -43,27 +48,55 @@ export class WakaTimeService {
 
     try {
       const authHeader = Buffer.from(apiKey).toString('base64');
-      const { data } = await axios.get(
-        `${this.baseUrl}/users/current/summaries`,
-        {
-          params: { range: 'Today' },
-          headers: { Authorization: `Basic ${authHeader}` },
-        },
-      );
+      const headers = { Authorization: `Basic ${authHeader}` };
+      const today = new Date().toISOString().slice(0, 10);
 
-      const summary = data?.data?.[0];
+      const [summariesRes, heartbeatsRes] = await Promise.all([
+        axios.get(`${this.baseUrl}/users/current/summaries`, {
+          params: { range: 'Today' },
+          headers,
+        }),
+        axios
+          .get(`${this.baseUrl}/users/current/heartbeats`, {
+            params: { date: today },
+            headers,
+          })
+          .catch((err) => {
+            this.logger.warn(
+              `WakaTime heartbeats fetch failed: ${(err as Error).message}`,
+            );
+            return { data: { data: [] } };
+          }),
+      ]);
+
+      const summary = summariesRes.data?.data?.[0];
       if (!summary) return null;
 
       const totalSeconds = summary.grand_total?.total_seconds ?? 0;
       if (totalSeconds === 0) return null;
 
+      const heartbeats: Array<{ time: number }> =
+        heartbeatsRes.data?.data ?? [];
+      const lastHeartbeat = heartbeats[heartbeats.length - 1];
+      const lastHeartbeatMs = lastHeartbeat
+        ? Math.round(lastHeartbeat.time * 1000)
+        : null;
+      const isCodingNow = lastHeartbeatMs
+        ? Date.now() - lastHeartbeatMs < ACTIVE_THRESHOLD_MS
+        : false;
+
       const result: WakaTimeToday = {
         text: summary.grand_total?.text ?? '',
         total_seconds: totalSeconds,
         top_language: summary.languages?.[0]?.name ?? null,
+        is_coding_now: isCodingNow,
+        last_heartbeat_at: lastHeartbeatMs
+          ? new Date(lastHeartbeatMs).toISOString()
+          : null,
       };
 
-      await this.cacheManager.set(cacheKey, result, 300);
+      // TTL in seconds. Kept short so is_coding_now stays fresh.
+      await this.cacheManager.set(cacheKey, result, CACHE_TTL_SECONDS);
       return result;
     } catch (error) {
       this.logger.error('Failed to fetch WakaTime data', error);

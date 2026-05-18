@@ -11,6 +11,8 @@ export interface HanoiWeather {
   description: string;
 }
 
+const CACHE_TTL_SECONDS = 600;
+
 @Injectable()
 export class WeatherService {
   private readonly logger = new Logger(WeatherService.name);
@@ -52,7 +54,8 @@ export class WeatherService {
         description: data?.weather?.[0]?.description ?? '',
       };
 
-      await this.cacheManager.set(cacheKey, result, 600);
+      // TTL in seconds
+      await this.cacheManager.set(cacheKey, result, CACHE_TTL_SECONDS);
       return result;
     } catch (error) {
       this.logger.error('Failed to fetch weather data', error);

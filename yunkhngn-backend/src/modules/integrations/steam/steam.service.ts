@@ -8,7 +8,11 @@ import axios from 'axios';
 export interface SteamNowPlaying {
   name: string;
   app_id?: number;
+  is_playing_now: boolean;
+  playtime_2weeks_minutes?: number;
 }
+
+const CACHE_TTL_SECONDS = 60;
 
 @Injectable()
 export class SteamService {
@@ -50,22 +54,42 @@ export class SteamService {
     }
 
     try {
-      const { data } = await axios.get(
+      // 1) Check if currently in-game
+      const summariesRes = await axios.get(
         `${this.baseUrl}/ISteamUser/GetPlayerSummaries/v2/`,
         { params: { key: apiKey, steamids: userId } },
       );
-
-      const player = data?.response?.players?.[0];
+      const player = summariesRes.data?.response?.players?.[0];
       const gameName: string | undefined = player?.gameextrainfo;
       const gameId: string | undefined = player?.gameid;
 
-      if (!gameName) return null;
+      if (gameName) {
+        const result: SteamNowPlaying = {
+          name: gameName,
+          app_id: gameId ? Number(gameId) : undefined,
+          is_playing_now: true,
+        };
+        // TTL in seconds
+        await this.cacheManager.set(cacheKey, result, CACHE_TTL_SECONDS);
+        return result;
+      }
+
+      // 2) Not in-game — fall back to recent game
+      const recentRes = await axios.get(
+        `${this.baseUrl}/IPlayerService/GetRecentlyPlayedGames/v1/`,
+        { params: { key: apiKey, steamid: userId, count: 1 } },
+      );
+      const recent = recentRes.data?.response?.games?.[0];
+      if (!recent?.name) return null;
 
       const result: SteamNowPlaying = {
-        name: gameName,
-        app_id: gameId ? Number(gameId) : undefined,
+        name: recent.name,
+        app_id: recent.appid ? Number(recent.appid) : undefined,
+        is_playing_now: false,
+        playtime_2weeks_minutes: recent.playtime_2weeks ?? 0,
       };
-      await this.cacheManager.set(cacheKey, result, 60);
+      // TTL in seconds
+      await this.cacheManager.set(cacheKey, result, CACHE_TTL_SECONDS);
       return result;
     } catch (error) {
       this.logger.error('Failed to fetch Steam data', error);

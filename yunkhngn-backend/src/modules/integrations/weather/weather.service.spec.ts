@@ -36,6 +36,14 @@ describe('WeatherService', () => {
 
   it('returns null when API key is missing', async () => {
     expect(await service.getHanoi()).toBeNull();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns cached value without hitting the API', async () => {
+    cache.get.mockResolvedValue({ temp: 25, condition: 'Clear', description: 'cached' });
+    const result = await service.getHanoi();
+    expect(result).toEqual({ temp: 25, condition: 'Clear', description: 'cached' });
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('returns parsed data on happy path', async () => {
