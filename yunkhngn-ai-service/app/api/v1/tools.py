@@ -60,7 +60,14 @@ async def what_to_eat(
         f"- Thời tiết: {weather['weather_description']}, {weather['temperature_c']:.0f}°C"
     )
 
-    suggestion = await gemini_service.generate_text(prompt, api_key=x_gemini_api_key, model=x_gemini_model)
+    try:
+        suggestion = await gemini_service.generate_text(prompt, api_key=x_gemini_api_key, model=x_gemini_model)
+    except ValueError as e:
+        logger.error(f"Gemini key error: {e}")
+        raise HTTPException(status_code=503, detail="Gemini API key is missing or invalid")
+    except Exception as e:
+        logger.error(f"Gemini generation failed: {e}")
+        raise HTTPException(status_code=503, detail="AI generation failed")
 
     context = WhatToEatContext(
         weather_description=weather["weather_description"],
