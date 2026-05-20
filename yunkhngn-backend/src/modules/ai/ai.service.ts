@@ -250,5 +250,9 @@ export class AiService {
       );
     }
   }
+
+  async movieSuggest(body: { mood: string; genres?: string[]; language?: string }) {
+    return this.callAiService('/movie-suggest', body, '/tools');
+  }
 }
 

@@ -186,5 +186,16 @@ export class AiController {
     }
     return this.aiService.whatToEat(body);
   }
+
+  @Post('tools/movie-suggest')
+  @ApiOperation({ summary: 'Suggest movies based on mood and genres' })
+  async movieSuggest(
+    @Body() body: { mood: string; genres?: string[]; language?: string },
+  ) {
+    if (!body.mood) {
+      throw new HttpException('mood is required', HttpStatus.BAD_REQUEST);
+    }
+    return this.aiService.movieSuggest(body);
+  }
 }
 
