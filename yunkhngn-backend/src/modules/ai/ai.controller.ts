@@ -197,5 +197,16 @@ export class AiController {
     }
     return this.aiService.movieSuggest(body);
   }
+
+  @Post('tools/calorie-estimate')
+  @ApiOperation({ summary: 'Estimate calories and macros for a food description query' })
+  async calorieEstimate(
+    @Body() body: { query: string },
+  ) {
+    if (!body.query) {
+      throw new HttpException('query is required', HttpStatus.BAD_REQUEST);
+    }
+    return this.aiService.calorieEstimate(body);
+  }
 }
 

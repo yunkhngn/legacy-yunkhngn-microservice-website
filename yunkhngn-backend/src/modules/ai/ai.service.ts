@@ -254,5 +254,9 @@ export class AiService {
   async movieSuggest(body: { mood: string; genres?: string[]; language?: string }) {
     return this.callAiService('/movie-suggest', body, '/tools');
   }
+
+  async calorieEstimate(body: { query: string }) {
+    return this.callAiService('/calorie-estimate', body, '/tools');
+  }
 }
 
