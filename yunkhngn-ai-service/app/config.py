@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
     gemini_api_key: str = ""
     github_token: str = ""
+    ai_model: str = "gemini-2.0-flash"
 
     log_level: str = "INFO"
 

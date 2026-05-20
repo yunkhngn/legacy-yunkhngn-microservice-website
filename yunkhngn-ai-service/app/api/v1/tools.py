@@ -29,6 +29,8 @@ def _get_meal_type(hour: int) -> str:
 async def what_to_eat(
     request: WhatToEatRequest,
     x_openweather_api_key: Optional[str] = Header(None),
+    x_gemini_api_key: Optional[str] = Header(None),
+    x_gemini_model: Optional[str] = Header(None),
 ):
     if not x_openweather_api_key:
         raise HTTPException(status_code=400, detail="x-openweather-api-key header is required")
@@ -58,7 +60,7 @@ async def what_to_eat(
         f"- Thời tiết: {weather['weather_description']}, {weather['temperature_c']:.0f}°C"
     )
 
-    suggestion = await gemini_service.generate_text(prompt)
+    suggestion = await gemini_service.generate_text(prompt, api_key=x_gemini_api_key, model=x_gemini_model)
 
     context = WhatToEatContext(
         weather_description=weather["weather_description"],

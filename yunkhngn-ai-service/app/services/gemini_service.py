@@ -14,10 +14,14 @@ def _get_client(api_key: str | None = None):
         raise ValueError("GEMINI_API_KEY is missing")
     return genai.Client(api_key=final_key)
 
-async def generate_text(prompt: str, api_key: str | None = None) -> str:
+def _get_model(model: str | None = None) -> str:
+    # Priority: caller-supplied (from x-gemini-model header) > env var > hardcoded default
+    return model or get_settings().ai_model
+
+async def generate_text(prompt: str, api_key: str | None = None, model: str | None = None) -> str:
     client = _get_client(api_key)
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model=_get_model(model),
         contents=prompt,
     )
     return response.text
@@ -59,7 +63,7 @@ Repository Context:
 {context}"""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
+    response = client.models.generate_content(model=_get_model(), contents=prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").strip()
     return json.loads(text)
 
@@ -78,7 +82,7 @@ Return JSON: {{"title": "...", "tags": ["..."], "content": "Full HTML..."}}
 Write in {lang}. No markdown code blocks."""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-3-flash-preview", contents=system_prompt)
+    response = client.models.generate_content(model=_get_model(), contents=system_prompt)
     text = response.text.replace("```json\n", "").replace("\n```", "").replace("```html\n", "").strip()
     try:
         return json.loads(text)
@@ -116,7 +120,7 @@ Generate:
 Respond in {lang}. Professional but encouraging."""
     
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
+    response = client.models.generate_content(model=_get_model(), contents=prompt)
     return response.text.replace("```html\n", "").replace("\n```", "").strip()
 
 async def chat_with_context(message: str, history: list, context_data: dict, language: str = "vi", api_key: str | None = None) -> str:
@@ -143,7 +147,7 @@ Instructions: Answer based on provided content. Be helpful, concise, professiona
     contents.append({"role": "user", "parts": [{"text": message}]})
 
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-3-flash-preview", contents=contents)
+    response = client.models.generate_content(model=_get_model(), contents=contents)
     return response.text
 
 async def generate_tarot_reading(question: str, cards: list[dict], api_key: str | None = None) -> str:
@@ -191,5 +195,5 @@ _Hệ thống AI tiên tri Tarot của yunkhngn_
 Hãy viết ngắn gọn, súc tích, có xuống dòng ở các đầu mục, sử dụng markdown để làm nổi bật các phần quan trọng."""
 
     client = _get_client(api_key)
-    response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
+    response = client.models.generate_content(model=_get_model(), contents=prompt)
     return response.text
