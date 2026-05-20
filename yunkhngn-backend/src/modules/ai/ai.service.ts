@@ -204,4 +204,41 @@ export class AiService {
       return { count: 0 };
     }
   }
+
+  async whatToEat(body: { lat: number; lon: number; timezone: string }) {
+    const openWeatherKey =
+      await this.settingsService.getDecryptedSetting('openweather_api_key');
+
+    try {
+      const response = await fetch(
+        `${this.aiServiceUrl}/api/v1/tools/what-to-eat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-openweather-api-key': openWeatherKey || '',
+          },
+          body: JSON.stringify(body),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new HttpException(
+          errorData.detail || 'AI Service Error',
+          response.status || HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`whatToEat error: ${error.message}`, error.stack);
+      throw new HttpException(
+        'Failed to connect to AI Service',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
 }
+
