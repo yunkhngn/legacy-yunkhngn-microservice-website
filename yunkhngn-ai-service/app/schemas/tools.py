@@ -28,3 +28,10 @@ class MovieSuggestRequest(BaseModel):
 
 class MovieSuggestResponse(BaseModel):
     suggestion: str
+
+
+class CalorieEstimateRequest(BaseModel):
+    query: str
+
+class CalorieEstimateResponse(BaseModel):
+    suggestion: str
