@@ -17,3 +17,14 @@ class WhatToEatContext(BaseModel):
 class WhatToEatResponse(BaseModel):
     suggestion: str
     context: WhatToEatContext
+
+
+from typing import List
+
+class MovieSuggestRequest(BaseModel):
+    mood: str
+    genres: List[str] = []
+    language: str = 'vi'
+
+class MovieSuggestResponse(BaseModel):
+    suggestion: str

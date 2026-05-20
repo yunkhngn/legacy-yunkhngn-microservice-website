@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, Header, HTTPException
 
-from app.schemas.tools import WhatToEatContext, WhatToEatRequest, WhatToEatResponse
+from app.schemas.tools import WhatToEatContext, WhatToEatRequest, WhatToEatResponse, MovieSuggestRequest, MovieSuggestResponse
 from app.services import gemini_service
 from app.services.weather_service import get_current_weather
 
@@ -78,3 +78,28 @@ async def what_to_eat(
     )
 
     return WhatToEatResponse(suggestion=suggestion, context=context)
+
+
+@router.post("/tools/movie-suggest", response_model=MovieSuggestResponse)
+async def movie_suggest(
+    request: MovieSuggestRequest,
+    x_gemini_api_key: Optional[str] = Header(None),
+    x_gemini_model: Optional[str] = Header(None),
+):
+    genre_str = ", ".join(request.genres) if request.genres else "bất kỳ"
+    lang = "tiếng Việt" if request.language == "vi" else "English"
+    prompt = (
+        f"Bạn là chuyên gia tư vấn phim. Gợi ý 2-3 bộ phim phù hợp. Trả lời bằng {lang}.\n\n"
+        f"Tâm trạng hiện tại: {request.mood}\n"
+        f"Thể loại ưa thích: {genre_str}\n\n"
+        f"Với mỗi phim: tên phim, năm, thể loại, và 1-2 câu lý do tại sao phù hợp với tâm trạng."
+    )
+    try:
+        suggestion = await gemini_service.generate_text(prompt, api_key=x_gemini_api_key, model=x_gemini_model)
+    except ValueError as e:
+        logger.error(f"Gemini key error: {e}")
+        raise HTTPException(status_code=503, detail="Gemini API key is missing or invalid")
+    except Exception as e:
+        logger.error(f"Gemini generation failed: {e}")
+        raise HTTPException(status_code=503, detail="AI generation failed")
+    return MovieSuggestResponse(suggestion=suggestion)
