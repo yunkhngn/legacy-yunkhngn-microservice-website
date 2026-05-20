@@ -35,8 +35,7 @@ async def what_to_eat(
 
     try:
         weather = await get_current_weather(
-            lat=request.lat,
-            lon=request.lon,
+            location=request.location,
             api_key=x_openweather_api_key,
         )
     except httpx.HTTPStatusError as e:

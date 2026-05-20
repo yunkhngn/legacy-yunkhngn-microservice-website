@@ -2,8 +2,7 @@ from pydantic import BaseModel
 
 
 class WhatToEatRequest(BaseModel):
-    lat: float
-    lon: float
+    location: str
     timezone: str
 
 
