@@ -179,10 +179,10 @@ export class AiController {
   @Post('tools/what-to-eat')
   @ApiOperation({ summary: 'Suggest food based on location, weather, and time' })
   async whatToEat(
-    @Body() body: { lat: number; lon: number; timezone: string },
+    @Body() body: { location: string; timezone: string },
   ) {
-    if (body.lat === undefined || body.lon === undefined) {
-      throw new HttpException('lat and lon are required', HttpStatus.BAD_REQUEST);
+    if (!body.location) {
+      throw new HttpException('location is required', HttpStatus.BAD_REQUEST);
     }
     return this.aiService.whatToEat(body);
   }

@@ -205,7 +205,7 @@ export class AiService {
     }
   }
 
-  async whatToEat(body: { lat: number; lon: number; timezone: string }) {
+  async whatToEat(body: { location: string; timezone: string }) {
     const openWeatherKey =
       await this.settingsService.getDecryptedSetting('openweather_api_key');
 
