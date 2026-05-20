@@ -53,4 +53,41 @@ describe('AiService', () => {
       expect.any(Object),
     );
   });
+
+  describe('whatToEat', () => {
+    it('fetches openweather key from settings and calls AI service', async () => {
+      mockSettingsService.getDecryptedSetting.mockResolvedValueOnce('ow-key-123');
+
+      const mockResult = {
+        suggestion: 'Bún bò Huế',
+        context: {
+          weather_description: 'trời quang',
+          temperature_c: 30,
+          meal_type: 'trưa',
+          location_name: 'Hà Nội',
+          current_time_vn: '12:00',
+        },
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResult),
+      } as unknown as Response);
+
+      const result = await service.whatToEat({ lat: 21.02, lon: 105.85, timezone: 'Asia/Ho_Chi_Minh' });
+
+      expect(mockSettingsService.getDecryptedSetting).toHaveBeenCalledWith('openweather_api_key');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://ai-service:8000/api/v1/tools/what-to-eat',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'x-openweather-api-key': 'ow-key-123',
+          }),
+        }),
+      );
+      expect(result).toEqual(mockResult);
+    });
+  });
 });
+
