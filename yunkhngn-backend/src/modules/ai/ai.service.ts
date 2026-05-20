@@ -44,6 +44,7 @@ export class AiService {
       if (!apiKey) {
         apiKey = this.configService.get<string>('GEMINI_API_KEY');
       }
+      const aiModel = await this.settingsService.getDecryptedSetting('ai_service_model');
 
       const response = await fetch(
         `${this.aiServiceUrl}/api/v1${base}${endpoint}`,
@@ -52,6 +53,7 @@ export class AiService {
           headers: {
             'Content-Type': 'application/json',
             'x-gemini-api-key': apiKey || '',
+            'x-gemini-model': aiModel || '',
           },
           body: JSON.stringify(body),
         },
@@ -206,8 +208,11 @@ export class AiService {
   }
 
   async whatToEat(body: { location: string; timezone: string }) {
-    const openWeatherKey =
-      await this.settingsService.getDecryptedSetting('openweather_api_key');
+    const [openWeatherKey, geminiKey, aiModel] = await Promise.all([
+      this.settingsService.getDecryptedSetting('openweather_api_key'),
+      this.settingsService.getRandomApiKey(),
+      this.settingsService.getDecryptedSetting('ai_service_model'),
+    ]);
 
     try {
       const response = await fetch(
@@ -217,6 +222,8 @@ export class AiService {
           headers: {
             'Content-Type': 'application/json',
             'x-openweather-api-key': openWeatherKey || '',
+            'x-gemini-api-key': geminiKey || '',
+            'x-gemini-model': aiModel || '',
           },
           body: JSON.stringify(body),
         },
