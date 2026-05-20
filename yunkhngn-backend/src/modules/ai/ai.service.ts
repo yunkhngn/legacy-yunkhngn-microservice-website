@@ -214,6 +214,9 @@ export class AiService {
       this.settingsService.getDecryptedSetting('ai_service_model'),
     ]);
 
+    const finalGeminiKey =
+      geminiKey || this.configService.get<string>('GEMINI_API_KEY') || '';
+
     try {
       const response = await fetch(
         `${this.aiServiceUrl}/api/v1/tools/what-to-eat`,
@@ -222,7 +225,7 @@ export class AiService {
           headers: {
             'Content-Type': 'application/json',
             'x-openweather-api-key': openWeatherKey || '',
-            'x-gemini-api-key': geminiKey || '',
+            'x-gemini-api-key': finalGeminiKey,
             'x-gemini-model': aiModel || '',
           },
           body: JSON.stringify(body),
