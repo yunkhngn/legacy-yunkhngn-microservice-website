@@ -3,11 +3,10 @@ import httpx
 OPENWEATHER_BASE = "https://api.openweathermap.org/data/2.5/weather"
 
 
-async def get_current_weather(lat: float, lon: float, api_key: str) -> dict:
+async def get_current_weather(location: str, api_key: str) -> dict:
     """Returns weather_description, temperature_c, location_name."""
     params = {
-        "lat": lat,
-        "lon": lon,
+        "q": location,
         "appid": api_key,
         "units": "metric",
         "lang": "vi",
