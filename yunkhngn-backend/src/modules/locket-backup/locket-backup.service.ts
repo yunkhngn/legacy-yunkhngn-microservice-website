@@ -182,8 +182,9 @@ export class LocketBackupService {
       { email, password, captchaToken: '' },
       {
         headers: {
-          'x-api-key': LOCKET_API_KEY,
+          Accept: 'application/json',
           'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
         },
         timeout: 10000,
       },
