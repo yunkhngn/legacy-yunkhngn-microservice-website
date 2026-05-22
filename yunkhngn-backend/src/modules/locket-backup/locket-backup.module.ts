@@ -8,7 +8,13 @@ import { SettingsModule } from '../settings/settings.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, GalleryModule, CloudinaryModule, SettingsModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    GalleryModule,
+    CloudinaryModule,
+    SettingsModule,
+    NotificationsModule,
+  ],
   controllers: [LocketBackupController],
   providers: [LocketBackupService],
 })
