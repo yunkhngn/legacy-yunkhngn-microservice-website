@@ -136,6 +136,11 @@ const SYSTEM_SETTINGS_MAP: Record<
     sensitive: ['openweather_api_key'],
     sortOrder: 13,
   },
+  Locket: {
+    keys: ['locket_email', 'locket_password'],
+    sensitive: ['locket_password'],
+    sortOrder: 14,
+  },
   Other: {
     keys: ['journal_moods'],
     public: ['journal_moods'],
