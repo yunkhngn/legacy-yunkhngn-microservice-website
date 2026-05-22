@@ -156,13 +156,14 @@ export class LocketBackupService {
       this.logger.log(`Backup done: ${imported} imported, ${skipped} skipped`);
       return { imported, skipped };
     } catch (err) {
+      const message = this.getBackupErrorMessage(err);
       this.lastResult = {
         ran_at: new Date().toISOString(),
         imported: 0,
         skipped: 0,
-        error: err.message,
+        error: message,
       };
-      throw err;
+      throw new Error(message);
     } finally {
       this.isRunning = false;
     }
@@ -263,5 +264,32 @@ export class LocketBackupService {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
     return Buffer.from(res.data);
+  }
+
+  private getBackupErrorMessage(error: unknown): string {
+    if (!axios.isAxiosError(error)) {
+      return error instanceof Error ? error.message : 'Backup Locket thất bại';
+    }
+
+    const status = error.response?.status;
+    const url = error.config?.url ?? '';
+
+    if (status === 403) {
+      if (url.includes('/locket/loginV2')) {
+        return 'Locket login bị từ chối (403). Kiểm tra lại locket_email/locket_password trong Settings.';
+      }
+
+      if (url.includes('/locket/getMomentV2')) {
+        return 'Locket API từ chối lấy moments (403). Token/API key Locket không còn hợp lệ hoặc tài khoản không có quyền truy cập.';
+      }
+
+      return 'Không thể tải media từ Locket/Firebase (403). Một số link media có thể đã hết hạn hoặc bị chặn.';
+    }
+
+    if (status) {
+      return `Locket backup thất bại: upstream trả HTTP ${status}.`;
+    }
+
+    return error.message || 'Backup Locket thất bại';
   }
 }
