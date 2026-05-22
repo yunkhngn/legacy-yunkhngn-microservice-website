@@ -7,13 +7,13 @@ import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service
 import { SettingsService } from '../settings/settings.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const LOCKET_FIREBASE_AUTH_URL =
-  'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword';
+const LOCKET_AUTH_URL = 'https://auth.locket-dio.com/locket/loginV2';
 const LOCKET_FIRESTORE_URL =
   'https://firestore.googleapis.com/v1/projects/locket-4252a/databases/(default)/documents';
+const LOCKET_DIO_API_KEY = 'LKD-LOCKETDIO-AB02F55KYM55DD02MM03YY25-LKD';
 const BATCH_LIMIT = 100;
 const LOCKET_USER_AGENT =
-  'FirebaseAuth.iOS/10.23.1 com.locket.Locket/1.82.0 iPhone/18.0 hw/iPhone12_1';
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36';
 
 interface LocketMoment {
   uid: string;
@@ -90,28 +90,17 @@ export class LocketBackupService {
     this.isRunning = true;
 
     try {
-      const [email, password, firebaseApiKeySetting] = await Promise.all([
+      const [email, password] = await Promise.all([
         this.settingsService.getDecryptedSetting('locket_email'),
         this.settingsService.getDecryptedSetting('locket_password'),
-        this.settingsService.getDecryptedSetting('locket_firebase_api_key'),
       ]);
-      const firebaseApiKey =
-        firebaseApiKeySetting || process.env.LOCKET_FIREBASE_API_KEY;
 
       if (!email || !password) {
         throw new Error('Chưa cấu hình locket_email hoặc locket_password trong Admin → Settings → Locket');
       }
 
-      if (!firebaseApiKey) {
-        throw new Error('Chưa cấu hình locket_firebase_api_key trong Admin → Settings → Locket hoặc LOCKET_FIREBASE_API_KEY trong env');
-      }
-
       // Always login fresh — idToken expires after 1 hour
-      const { idToken, localId } = await this.login(
-        email,
-        password,
-        firebaseApiKey,
-      );
+      const { idToken, localId } = await this.login(email, password);
       this.logger.log(`Logged in to Locket as ${localId}`);
 
       const moments = await this.fetchAllMoments(idToken, localId);
@@ -209,29 +198,34 @@ export class LocketBackupService {
   private async login(
     email: string,
     password: string,
-    firebaseApiKey: string,
   ): Promise<{ idToken: string; localId: string }> {
     const res = await axios.post(
-      LOCKET_FIREBASE_AUTH_URL,
+      LOCKET_AUTH_URL,
       {
         email,
         password,
-        returnSecureToken: true,
-        clientType: 'CLIENT_TYPE_IOS',
+        captchaToken: '',
       },
       {
-        params: { key: firebaseApiKey },
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
           'User-Agent': LOCKET_USER_AGENT,
-          'X-Ios-Bundle-Identifier': 'com.locket.Locket',
+          Origin: 'https://locket-dio.com',
+          Referer: 'https://locket-dio.com/',
+          'x-api-key': LOCKET_DIO_API_KEY,
+          'x-app-api': 'v2.2.1',
+          'x-app-author': 'dio',
+          'x-app-client': 'Beta1.0.1.7',
+          'x-app-env': 'production',
+          'x-app-name': 'locketdio',
         },
         timeout: 10000,
       },
     );
 
-    const { idToken, localId } = res.data;
+    const data = res.data?.data ?? res.data;
+    const { idToken, localId } = data;
     if (!idToken || !localId) {
       throw new Error('Đăng nhập Locket thất bại: response thiếu idToken/localId');
     }
@@ -330,8 +324,8 @@ export class LocketBackupService {
     const url = error.config?.url ?? '';
 
     if (status === 403) {
-      if (url.includes('verifyPassword')) {
-        return 'Locket login bị từ chối (403). Kiểm tra locket_firebase_api_key hoặc quyền truy cập Firebase Auth.';
+      if (url.includes('/locket/loginV2')) {
+        return 'Locket Dio login bị từ chối (403). Kiểm tra locket_email/locket_password hoặc header x-api-key/x-app-* đã thay đổi.';
       }
 
       if (url.includes('/history/')) {
