@@ -55,6 +55,27 @@ export class CloudinaryService {
     }
   }
 
+  async uploadBuffer(
+    buffer: Buffer,
+    folder: string,
+    options?: { public_id?: string; resource_type?: 'image' | 'video' | 'auto' },
+  ): Promise<UploadApiResponse> {
+    return new Promise((resolve, reject) => {
+      const upload = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          public_id: options?.public_id,
+          resource_type: options?.resource_type ?? 'auto',
+        },
+        (error, result) => {
+          if (error) return reject(new Error(error.message));
+          resolve(result);
+        },
+      );
+      Readable.from(buffer).pipe(upload);
+    });
+  }
+
   async deleteImage(publicId: string) {
     try {
       const result = await cloudinary.uploader.destroy(publicId);

@@ -46,6 +46,7 @@ import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuditContextInterceptor } from './modules/audit-logs/audit-context.interceptor';
 import { QueueModule } from './modules/queue/queue.module';
+import { LocketBackupModule } from './modules/locket-backup/locket-backup.module';
 
 // Integration Modules
 import { CloudinaryModule } from './modules/integrations/cloudinary/cloudinary.module';
@@ -114,6 +115,7 @@ import { HealthController } from './modules/health/health.controller';
     KnowledgeModule,
     AuditLogsModule,
     QueueModule,
+    LocketBackupModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController, HealthController],
