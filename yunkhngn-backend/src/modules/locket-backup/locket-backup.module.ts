@@ -4,17 +4,9 @@ import { LocketBackupService } from './locket-backup.service';
 import { PrismaModule } from '../../database/prisma/prisma.module';
 import { GalleryModule } from '../gallery/gallery.module';
 import { CloudinaryModule } from '../integrations/cloudinary/cloudinary.module';
-import { SettingsModule } from '../settings/settings.module';
-import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    GalleryModule,
-    CloudinaryModule,
-    SettingsModule,
-    NotificationsModule,
-  ],
+  imports: [PrismaModule, GalleryModule, CloudinaryModule],
   controllers: [LocketBackupController],
   providers: [LocketBackupService],
 })
