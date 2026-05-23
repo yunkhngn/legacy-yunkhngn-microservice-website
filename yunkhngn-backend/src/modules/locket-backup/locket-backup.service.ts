@@ -5,7 +5,6 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { GalleryService } from '../gallery/gallery.service';
 import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service';
 import { SettingsService } from '../settings/settings.service';
-import { NotificationsService } from '../notifications/notifications.service';
 
 const LOCKET_AUTH_URL = 'https://auth.locket-dio.com/locket/loginV2';
 const LOCKET_FIRESTORE_URL =
@@ -58,7 +57,6 @@ export class LocketBackupService {
     private readonly galleryService: GalleryService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly settingsService: SettingsService,
-    private readonly notificationsService: NotificationsService,
   ) {}
 
   // 1st of every month at 02:00
@@ -67,18 +65,9 @@ export class LocketBackupService {
     this.logger.log('Running scheduled monthly Locket backup');
     try {
       const { imported, skipped } = await this.runBackup();
-      await this.notificationsService.create(
-        'locket_backup',
-        `Locket backup thành công: +${imported} ảnh mới, bỏ qua ${skipped} trùng.`,
-        '/admin/photo',
-      );
+      this.logger.log(`Scheduled backup done: +${imported} imported, ${skipped} skipped`);
     } catch (err) {
       this.logger.error('Scheduled backup failed:', err.message);
-      await this.notificationsService.create(
-        'locket_backup_error',
-        `Locket backup thất bại: ${err.message}`,
-        '/admin/settings',
-      );
     }
   }
 
