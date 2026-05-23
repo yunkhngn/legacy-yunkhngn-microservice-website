@@ -9,7 +9,6 @@ import { SettingsService } from '../settings/settings.service';
 const LOCKET_AUTH_URL = 'https://auth.locket-dio.com/locket/loginV2';
 const LOCKET_FIRESTORE_URL =
   'https://firestore.googleapis.com/v1/projects/locket-4252a/databases/(default)/documents';
-const LOCKET_DIO_API_KEY = 'LKD-LOCKETDIO-AB02F55KYM55DD02MM03YY25-LKD';
 const BATCH_LIMIT = 100;
 const LOCKET_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36';
@@ -79,17 +78,18 @@ export class LocketBackupService {
     this.isRunning = true;
 
     try {
-      const [email, password] = await Promise.all([
+      const [email, password, apiKey] = await Promise.all([
         this.settingsService.getDecryptedSetting('locket_email'),
         this.settingsService.getDecryptedSetting('locket_password'),
+        this.settingsService.getDecryptedSetting('locket_api_key'),
       ]);
 
-      if (!email || !password) {
-        throw new Error('Chưa cấu hình locket_email hoặc locket_password trong Admin → Settings → Locket');
+      if (!email || !password || !apiKey) {
+        throw new Error('Chưa cấu hình locket_email/locket_password/locket_api_key trong Admin → Settings → Locket');
       }
 
       // Always login fresh — idToken expires after 1 hour
-      const { idToken, localId } = await this.login(email, password);
+      const { idToken, localId } = await this.login(email, password, apiKey);
       this.logger.log(`Logged in to Locket as ${localId}`);
 
       const moments = await this.fetchAllMoments(idToken, localId);
@@ -187,6 +187,7 @@ export class LocketBackupService {
   private async login(
     email: string,
     password: string,
+    apiKey: string,
   ): Promise<{ idToken: string; localId: string }> {
     const res = await axios.post(
       LOCKET_AUTH_URL,
@@ -202,7 +203,7 @@ export class LocketBackupService {
           'User-Agent': LOCKET_USER_AGENT,
           Origin: 'https://locket-dio.com',
           Referer: 'https://locket-dio.com/',
-          'x-api-key': LOCKET_DIO_API_KEY,
+          'x-api-key': apiKey,
           'x-app-api': 'v2.2.1',
           'x-app-author': 'dio',
           'x-app-client': 'Beta1.0.1.7',
