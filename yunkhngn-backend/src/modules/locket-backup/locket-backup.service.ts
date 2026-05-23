@@ -7,9 +7,8 @@ import { CloudinaryService } from '../integrations/cloudinary/cloudinary.service
 import { SettingsService } from '../settings/settings.service';
 
 const LOCKET_AUTH_URL = 'https://auth.locket-dio.com/locket/loginV2';
-const LOCKET_FIRESTORE_URL =
-  'https://firestore.googleapis.com/v1/projects/locket-4252a/databases/(default)/documents';
-const BATCH_LIMIT = 100;
+const LOCKET_DIO_API = 'https://api.locket-dio.com';
+const BATCH_LIMIT = 60;
 const LOCKET_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36';
 
@@ -20,22 +19,6 @@ interface LocketMoment {
   thumbnail_url: string;
   video_url?: string;
   caption?: string;
-}
-
-interface FirestoreValue {
-  stringValue?: string;
-  integerValue?: string;
-  doubleValue?: number;
-  booleanValue?: boolean;
-  timestampValue?: string;
-  mapValue?: { fields?: Record<string, FirestoreValue> };
-  arrayValue?: { values?: FirestoreValue[] };
-}
-
-interface FirestoreDocument {
-  name: string;
-  fields?: Record<string, FirestoreValue>;
-  createTime?: string;
 }
 
 export interface BackupResult {
@@ -92,14 +75,13 @@ export class LocketBackupService {
       const { idToken, localId } = await this.login(email, password, apiKey);
       this.logger.log(`Logged in to Locket as ${localId}`);
 
-      const moments = await this.fetchAllMoments(idToken, localId);
+      const moments = await this.fetchAllMoments(idToken, localId, apiKey);
       this.logger.log(`Fetched ${moments.length} moments from Locket`);
 
       let imported = 0;
       let skipped = 0;
 
       for (const moment of moments) {
-        // Match full JSON key to avoid substring false positives
         const exists = await this.prisma.gallery.findFirst({
           where: { exifData: { contains: `"uid":"${moment.uid}"` } },
           select: { id: true },
@@ -123,7 +105,6 @@ export class LocketBackupService {
             .replace(/:/g, '-')
             .slice(0, 19);
 
-          // public_id must NOT include folder prefix — Cloudinary concatenates folder + public_id
           const uploaded = await this.cloudinaryService.uploadBuffer(
             buffer,
             'locket',
@@ -191,11 +172,7 @@ export class LocketBackupService {
   ): Promise<{ idToken: string; localId: string }> {
     const res = await axios.post(
       LOCKET_AUTH_URL,
-      {
-        email,
-        password,
-        captchaToken: '',
-      },
+      { email, password, captchaToken: '' },
       {
         headers: {
           Accept: 'application/json',
@@ -222,23 +199,25 @@ export class LocketBackupService {
     return { idToken, localId };
   }
 
-  private async fetchAllMoments(idToken: string, localId: string): Promise<LocketMoment[]> {
+  private async fetchAllMoments(
+    idToken: string,
+    localId: string,
+    apiKey: string,
+  ): Promise<LocketMoment[]> {
     const seen = new Set<string>();
     const allMoments: LocketMoment[] = [];
-    let pageToken: string | null = null;
+    let timestamp = Math.floor(Date.now() / 1000);
     let consecutiveDupes = 0;
 
     while (true) {
-      let result: { moments: LocketMoment[]; nextPageToken: string | null };
+      let batch: LocketMoment[];
       try {
-        result = await this.fetchBatch({ idToken, localId, pageToken });
+        batch = await this.fetchBatch({ idToken, timestamp, friendId: localId, apiKey });
       } catch (err) {
-        // A single batch failure should not abort previously fetched moments
-        this.logger.warn(`Batch fetch failed at pageToken ${pageToken ?? 'first'}: ${err.message}. Stopping pagination.`);
+        this.logger.warn(`Batch fetch failed at timestamp ${timestamp}: ${err.message}. Stopping pagination.`);
         break;
       }
 
-      const batch = result.moments;
       if (!batch?.length) break;
 
       let newInBatch = 0;
@@ -257,8 +236,7 @@ export class LocketBackupService {
         consecutiveDupes = 0;
       }
 
-      pageToken = result.nextPageToken;
-      if (!pageToken) break;
+      timestamp = batch[batch.length - 1].date;
       await new Promise((r) => setTimeout(r, 300));
     }
 
@@ -267,33 +245,32 @@ export class LocketBackupService {
 
   private async fetchBatch(params: {
     idToken: string;
-    localId: string;
-    pageToken: string | null;
-  }): Promise<{ moments: LocketMoment[]; nextPageToken: string | null }> {
-    const res = await axios.get(
-      `${LOCKET_FIRESTORE_URL}/history/${params.localId}/entries`,
+    timestamp: number;
+    friendId: string;
+    apiKey: string;
+  }): Promise<LocketMoment[]> {
+    const res = await axios.post(
+      `${LOCKET_DIO_API}/locket/getMomentV2`,
+      { timestamp: params.timestamp, friendId: params.friendId, limit: BATCH_LIMIT },
       {
-        params: {
-          orderBy: 'date desc',
-          pageSize: BATCH_LIMIT,
-          ...(params.pageToken && { pageToken: params.pageToken }),
-        },
         headers: {
           Authorization: `Bearer ${params.idToken}`,
           Accept: 'application/json',
           'Content-Type': 'application/json',
           'User-Agent': LOCKET_USER_AGENT,
-          'X-Ios-Bundle-Identifier': 'com.locket.Locket',
+          Origin: 'https://locket-dio.com',
+          Referer: 'https://locket-dio.com/',
+          'x-api-key': params.apiKey,
+          'x-app-api': 'v2.2.1',
+          'x-app-author': 'dio',
+          'x-app-client': 'Beta1.0.1.7',
+          'x-app-env': 'production',
+          'x-app-name': 'locketdio',
         },
         timeout: 15000,
       },
     );
-
-    const documents = (res.data?.documents ?? []) as FirestoreDocument[];
-    return {
-      moments: documents.map((doc) => this.normalizeMoment(doc)).filter(Boolean),
-      nextPageToken: res.data?.nextPageToken ?? null,
-    };
+    return res.data?.data ?? [];
   }
 
   private async downloadFile(url: string): Promise<Buffer> {
@@ -315,14 +292,12 @@ export class LocketBackupService {
 
     if (status === 403) {
       if (url.includes('/locket/loginV2')) {
-        return 'Locket Dio login bị từ chối (403). Kiểm tra locket_email/locket_password hoặc header x-api-key/x-app-* đã thay đổi.';
+        return 'Locket Dio login bị từ chối (403). Kiểm tra locket_email/locket_password hoặc locket_api_key.';
       }
-
-      if (url.includes('/history/')) {
-        return 'Firestore từ chối lấy moments (403). Token Locket không hợp lệ hoặc tài khoản không có quyền đọc history.';
+      if (url.includes('/locket/getMomentV2')) {
+        return 'Locket Dio từ chối lấy moments (403). Token hết hạn hoặc api key sai.';
       }
-
-      return 'Không thể tải media từ Locket/Firebase (403). Một số link media có thể đã hết hạn hoặc bị chặn.';
+      return 'Không thể tải media từ Locket (403). Link có thể đã hết hạn hoặc bị chặn.';
     }
 
     if (status) {
@@ -330,74 +305,5 @@ export class LocketBackupService {
     }
 
     return error.message || 'Backup Locket thất bại';
-  }
-
-  private normalizeMoment(doc: FirestoreDocument): LocketMoment | null {
-    const fields = doc.fields;
-    if (!fields) return null;
-
-    const uid =
-      this.parseFirestoreValue(fields.canonical_uid) ||
-      doc.name.split('/').pop();
-    const dateValue = this.parseFirestoreValue(fields.date) || doc.createTime;
-    const date = this.toUnixSeconds(dateValue);
-    const thumbnailUrl = this.replaceFirebaseWithCdn(
-      this.parseFirestoreValue(fields.thumbnail_url),
-    );
-    const videoUrl = this.replaceFirebaseWithCdn(
-      this.parseFirestoreValue(fields.video_url),
-    );
-
-    if (!uid || !date || !thumbnailUrl) return null;
-
-    return {
-      uid,
-      user: this.parseFirestoreValue(fields.user),
-      date,
-      thumbnail_url: thumbnailUrl,
-      video_url: videoUrl || undefined,
-      caption: this.parseFirestoreValue(fields.caption) || undefined,
-    };
-  }
-
-  private parseFirestoreValue(value?: FirestoreValue): any {
-    if (!value) return null;
-    if (value.stringValue !== undefined) return value.stringValue;
-    if (value.integerValue !== undefined) return parseInt(value.integerValue, 10);
-    if (value.doubleValue !== undefined) return value.doubleValue;
-    if (value.booleanValue !== undefined) return value.booleanValue;
-    if (value.timestampValue !== undefined) return value.timestampValue;
-    if (value.mapValue !== undefined) {
-      const fields = value.mapValue.fields || {};
-      return Object.fromEntries(
-        Object.entries(fields).map(([key, field]) => [
-          key,
-          this.parseFirestoreValue(field),
-        ]),
-      );
-    }
-    if (value.arrayValue !== undefined) {
-      return (value.arrayValue.values || []).map((item) =>
-        this.parseFirestoreValue(item),
-      );
-    }
-    return null;
-  }
-
-  private toUnixSeconds(value: unknown): number | null {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-      const parsed = Date.parse(value);
-      return Number.isNaN(parsed) ? null : Math.floor(parsed / 1000);
-    }
-    return null;
-  }
-
-  private replaceFirebaseWithCdn(url: unknown): string | null {
-    if (typeof url !== 'string' || !url) return null;
-    return url.replace(
-      'https://firebasestorage.googleapis.com',
-      'https://cdn.locketcamera.com',
-    );
   }
 }
