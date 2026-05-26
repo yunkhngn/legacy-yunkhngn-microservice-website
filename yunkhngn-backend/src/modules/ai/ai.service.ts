@@ -86,14 +86,6 @@ export class AiService {
     return data.text;
   }
 
-  async generateTarotReading(
-    question: string,
-    cards: { name: string; description: string }[],
-  ): Promise<string> {
-    const data = await this.callAiService('/tarot', { question, cards });
-    return data.analysis;
-  }
-
   async generateProjectInfo(
     repoUrl: string,
     language: string = 'vi',
