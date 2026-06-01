@@ -150,7 +150,7 @@ Instructions: Answer based on provided content. Be helpful, concise, professiona
     response = client.models.generate_content(model=_get_model(), contents=contents)
     return response.text
 
-async def generate_tarot_reading(question: str, cards: list[dict], api_key: str | None = None) -> str:
+async def generate_tarot_reading(question: str, cards: list[dict], api_key: str | None = None, model: str | None = None) -> str:
     positions = ['Quá khứ', 'Hiện tại', 'Tương lai']
     card_descriptions = "\n\n".join(
         f"Thẻ {positions[i]} - {card['name']}: {card['description']}"
@@ -195,5 +195,5 @@ _Hệ thống AI tiên tri Tarot của yunkhngn_
 Hãy viết ngắn gọn, súc tích, có xuống dòng ở các đầu mục, sử dụng markdown để làm nổi bật các phần quan trọng."""
 
     client = _get_client(api_key)
-    response = client.models.generate_content(model=_get_model(), contents=prompt)
+    response = client.models.generate_content(model=_get_model(model), contents=prompt)
     return response.text

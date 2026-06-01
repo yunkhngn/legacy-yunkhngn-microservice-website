@@ -16,7 +16,8 @@ TAROT_API_URL = "https://tarot.yunkhngn.dev/api/cards/threecards"
 @router.post("/chat/public")
 async def public_chat(
     request: PublicChatRequest,
-    x_gemini_api_key: Optional[str] = Header(None)
+    x_gemini_api_key: Optional[str] = Header(None),
+    x_gemini_model: Optional[str] = Header(None),
 ):
     try:
         # 1. Detect if it's an image request
@@ -59,7 +60,8 @@ async def public_chat(
                 analysis = await gemini_service.generate_tarot_reading(
                     question=request.message,
                     cards=cards_for_ai,
-                    api_key=x_gemini_api_key
+                    api_key=x_gemini_api_key,
+                    model=x_gemini_model,
                 )
             except Exception as e:
                 logger.error(f"Failed to generate tarot analysis: {e}", exc_info=True)
