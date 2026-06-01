@@ -56,6 +56,7 @@ import { NewsletterModule } from './modules/integrations/newsletter/newsletter.m
 import { WakaTimeModule } from './modules/integrations/wakatime/wakatime.module';
 import { SteamModule } from './modules/integrations/steam/steam.module';
 import { WeatherModule } from './modules/integrations/weather/weather.module';
+import { ValorantModule } from './modules/integrations/valorant/valorant.module';
 
 import { HealthController } from './modules/health/health.controller';
 
@@ -108,6 +109,7 @@ import { HealthController } from './modules/health/health.controller';
     WakaTimeModule,
     SteamModule,
     WeatherModule,
+    ValorantModule,
     LetterModule,
     MonitorModule,
     ChatLogsModule,
