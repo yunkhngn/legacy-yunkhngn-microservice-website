@@ -33,7 +33,7 @@ export class BlogService {
       throw new ConflictException('Slug already exists');
     }
 
-    const { content, excerpt, ...rest } = createBlogDto as any;
+    const { content, excerpt, sendNewsletter, ...rest } = createBlogDto as any;
     const data = {
       ...rest,
       contentJSON: rest.contentJSON || content,
