@@ -162,5 +162,16 @@ export class AiController {
     }
     return this.aiService.calorieEstimate(body);
   }
+
+  @Post('tarot')
+  @ApiOperation({ summary: 'Generate AI tarot reading analysis from 3 cards' })
+  async generateTarotReading(
+    @Body() body: { question: string; cards: { name: string; description: string }[] },
+  ) {
+    if (!body.question || !body.cards || body.cards.length !== 3) {
+      throw new HttpException('question and 3 cards are required', HttpStatus.BAD_REQUEST);
+    }
+    return this.aiService.generateTarotReading(body.question, body.cards);
+  }
 }
 
