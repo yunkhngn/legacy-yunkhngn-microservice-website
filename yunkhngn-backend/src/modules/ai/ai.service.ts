@@ -250,5 +250,9 @@ export class AiService {
   async calorieEstimate(body: { query: string }) {
     return this.callAiService('/calorie-estimate', body, '/tools');
   }
+
+  async generateTarotReading(question: string, cards: { name: string; description: string }[]): Promise<{ analysis: string }> {
+    return this.callAiService('/tarot', { question, cards }, '/gemini');
+  }
 }
 
