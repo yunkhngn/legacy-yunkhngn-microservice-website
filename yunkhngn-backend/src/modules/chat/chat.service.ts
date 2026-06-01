@@ -31,12 +31,14 @@ export class ChatService {
       if (!apiKey) {
         apiKey = this.configService.get<string>('GEMINI_API_KEY');
       }
+      const aiModel = await this.settingsService.getDecryptedSetting('ai_service_model');
 
       const response = await fetch(`${this.aiServiceUrl}/api/v1${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-gemini-api-key': apiKey || '',
+          'x-gemini-model': aiModel || '',
         },
         body: JSON.stringify(body),
       });
