@@ -24,7 +24,7 @@ api.yunkhngn.dev {
     respond @blocked_agents 403
     @bull_board path /admin/queues /admin/queues/*
     basicauth @bull_board {
-        admin $2b$14$nqu3hpnbbKPXgBn3B59zWeIgUNVQEsDnTaEVsNNscaG.N9I7wXX7y
+        admin $2y$14$jW7AUqWsv02XBImicoekp.pw7ZgnS0BmaTw7J3n5418ykXvOwYhYO
     }
     
     reverse_proxy backend:3001
