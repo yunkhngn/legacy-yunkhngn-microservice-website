@@ -253,8 +253,10 @@ export class LetterService {
     if (dto.contentJSON !== undefined) data.contentJSON = dto.contentJSON;
 
     // A text letter never needs AI processing — it is always ready.
+    // Guarantee a font is always persisted for text letters (mirrors create).
     if (dto.kind === 'text') {
       data.status = 'ready';
+      data.font = dto.font || existing.font || 'fz';
     }
 
     let shouldReprocess = false;
@@ -312,11 +314,13 @@ export class LetterService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    // Strip the (potentially large) TipTap content out of the audit detail.
+    const { contentJSON: _omitted, ...auditDetails } = dto;
     void this.auditLogsService.log({
       action: AuditAction.UPDATE_LETTER,
       entity: AuditEntity.LETTER,
       entityId: id,
-      details: dto as Record<string, unknown>,
+      details: auditDetails as Record<string, unknown>,
     });
 
     return this.stripSensitive(letter);
