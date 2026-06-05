@@ -274,6 +274,9 @@ model Letter {
   code      String       @unique
   title     String?
   password  String? // bcrypt hash, null = public
+  kind            String       @default("scan") // "scan" (image pages) or "text" (typed letter)
+  font            String? // "reebie" | "fz" — only for kind="text"
+  contentJSON     String?      @db.NVarChar(Max) // TipTap JSON — only for kind="text"
   status          String       @default("processing") // processing, ready, failed
   isActive        Boolean      @default(true)
   enableAnimation Boolean      @default(true) // Whether to display handwriting animation
