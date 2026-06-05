@@ -3,12 +3,12 @@ import {
   IsOptional,
   IsBoolean,
   IsArray,
-  ArrayMinSize,
   ArrayMaxSize,
   MaxLength,
   Matches,
   ValidateNested,
   IsNumber,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -55,10 +55,22 @@ export class CreateLetterDto {
   @IsBoolean()
   enableAnimation?: boolean;
 
+  @IsOptional()
+  @IsIn(['scan', 'text'])
+  kind?: string;
+
+  @IsOptional()
+  @IsIn(['reebie', 'fz'])
+  font?: string;
+
+  @IsOptional()
+  @IsString()
+  contentJSON?: string;
+
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => LetterPageDto)
-  pages: LetterPageDto[];
+  pages?: LetterPageDto[];
 }

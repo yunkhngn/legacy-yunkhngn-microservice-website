@@ -14,6 +14,9 @@ export class Letter {
   code: string;
   title: string;
   password?: string;
+  kind: string;
+  font?: string;
+  contentJSON?: string;
   views: number;
   isActive: boolean;
   status: string;
