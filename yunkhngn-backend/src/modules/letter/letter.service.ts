@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
   Inject,
   Logger,
 } from '@nestjs/common';
@@ -63,26 +64,50 @@ export class LetterService {
       ? await bcrypt.hash(dto.password, 10)
       : null;
 
-    this.logger.log(`Creating letter with code: ${code}`);
+    const kind = dto.kind === 'text' ? 'text' : 'scan';
+
+    if (kind === 'text' && !dto.contentJSON) {
+      throw new BadRequestException('A text letter requires content');
+    }
+    if (kind === 'scan' && (!dto.pages || dto.pages.length === 0)) {
+      throw new BadRequestException('A scan letter requires at least one page');
+    }
+
+    this.logger.log(`Creating ${kind} letter with code: ${code}`);
+
+    // Text letters need no AI processing; they are ready immediately.
+    const status =
+      kind === 'text' || dto.enableAnimation === false ? 'ready' : 'processing';
 
     const letter = await this.letterRepository.create({
       code,
       title: dto.title,
       password: hashedPassword,
-      status: dto.enableAnimation === false ? 'ready' : 'processing',
+      kind,
+      font: kind === 'text' ? dto.font || 'fz' : null,
+      contentJSON: kind === 'text' ? dto.contentJSON : null,
+      status,
       isActive: dto.isActive ?? true,
       enableAnimation: dto.enableAnimation ?? true,
-      pages: {
-        create: dto.pages.map((p, i) => ({
-          imageUrl: p.imageUrl,
-          width: p.width,
-          height: p.height,
-          sortOrder: p.sortOrder ?? i,
-        })),
-      },
+      pages:
+        kind === 'scan'
+          ? {
+              create: dto.pages.map((p, i) => ({
+                imageUrl: p.imageUrl,
+                width: p.width,
+                height: p.height,
+                sortOrder: p.sortOrder ?? i,
+              })),
+            }
+          : undefined,
     });
 
-    if (letter.enableAnimation && letter.pages) {
+    if (
+      kind === 'scan' &&
+      letter.enableAnimation &&
+      letter.pages &&
+      letter.pages.length > 0
+    ) {
       this.triggerProcessing(letter.id, letter.pages).catch((err) =>
         this.logger.error('Letter processing trigger failed', err.stack),
       );
@@ -92,7 +117,7 @@ export class LetterService {
       action: AuditAction.CREATE_LETTER,
       entity: AuditEntity.LETTER,
       entityId: letter.id,
-      details: { code: letter.code, title: letter.title },
+      details: { code: letter.code, title: letter.title, kind },
     });
 
     return this.stripSensitive(letter);
@@ -167,6 +192,9 @@ export class LetterService {
       title: letter.title,
       hasPassword: !!letter.password,
       enableAnimation: letter.enableAnimation,
+      kind: letter.kind,
+      font: letter.font ?? null,
+      contentJSON: letter.password ? null : (letter.contentJSON ?? null),
       pages: letter.password ? [] : letter.pages || [],
       createdAt: letter.createdAt,
     };
@@ -182,12 +210,19 @@ export class LetterService {
     if (letter.status === 'failed')
       throw new NotFoundException('Letter processing failed');
 
-    if (!letter.password)
-      return { pages: letter.pages || [], title: letter.title };
+    const payload = {
+      pages: letter.pages || [],
+      title: letter.title,
+      kind: letter.kind,
+      font: letter.font ?? null,
+      contentJSON: letter.contentJSON ?? null,
+    };
+
+    if (!letter.password) return payload;
 
     const isValid = await bcrypt.compare(password, letter.password);
     if (!isValid) throw new ForbiddenException('Incorrect password');
-    return { pages: letter.pages || [], title: letter.title };
+    return payload;
   }
 
   async update(id: string, dto: UpdateLetterDto) {
@@ -213,12 +248,23 @@ export class LetterService {
       data.enableAnimation = dto.enableAnimation;
     const isAnimEnabled = dto.enableAnimation ?? existing.enableAnimation;
 
+    if (dto.kind !== undefined) data.kind = dto.kind;
+    if (dto.font !== undefined) data.font = dto.font;
+    if (dto.contentJSON !== undefined) data.contentJSON = dto.contentJSON;
+
+    // A text letter never needs AI processing — it is always ready.
+    // Guarantee a font is always persisted for text letters (mirrors create).
+    if (dto.kind === 'text') {
+      data.status = 'ready';
+      data.font = dto.font || existing.font || 'fz';
+    }
+
     let shouldReprocess = false;
 
     let imagesToDelete: string[] = [];
 
     // If pages change, process if animation is enabled
-    if (dto.pages) {
+    if (dto.pages && dto.kind !== 'text') {
       // Find old pages to diff
       const oldPages = existing.pages || [];
       const newUrls = dto.pages.map((p) => p.imageUrl);
@@ -268,11 +314,13 @@ export class LetterService {
       void this.cloudinaryService.deleteImagesSafely(imagesToDelete);
     }
 
+    // Strip the (potentially large) TipTap content out of the audit detail.
+    const { contentJSON: _omitted, ...auditDetails } = dto;
     void this.auditLogsService.log({
       action: AuditAction.UPDATE_LETTER,
       entity: AuditEntity.LETTER,
       entityId: id,
-      details: dto as Record<string, unknown>,
+      details: auditDetails as Record<string, unknown>,
     });
 
     return this.stripSensitive(letter);
