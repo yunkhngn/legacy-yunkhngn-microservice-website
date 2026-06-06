@@ -186,4 +186,30 @@ describe('LetterService', () => {
       expect(data.status).toBe('ready');
     });
   });
+
+  describe('findOne', () => {
+    it('returns the letter without the password hash', async () => {
+      mockRepo.findById.mockResolvedValue({
+        id: 'l1',
+        code: 'c1',
+        password: 'secret-hash',
+        kind: 'text',
+        font: 'fz',
+        contentJSON: '{"type":"doc"}',
+        pages: [],
+      });
+
+      const res = await service.findOne('l1');
+
+      expect(res.id).toBe('l1');
+      expect(res.contentJSON).toBe('{"type":"doc"}');
+      expect(res).not.toHaveProperty('password');
+      expect(res.hasPassword).toBe(true);
+    });
+
+    it('throws NotFound for a missing id', async () => {
+      mockRepo.findById.mockResolvedValue(null);
+      await expect(service.findOne('nope')).rejects.toThrow();
+    });
+  });
 });

@@ -168,6 +168,12 @@ export class LetterService {
     return letters.map((l) => this.stripSensitive(l));
   }
 
+  async findOne(id: string) {
+    const letter = await this.letterRepository.findById(id);
+    if (!letter) throw new NotFoundException('Letter not found');
+    return this.stripSensitive(letter);
+  }
+
   async resolve(code: string) {
     const letter = await this.letterRepository.findByCode(code);
     if (!letter) throw new NotFoundException('Letter not found');
