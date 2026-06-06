@@ -68,6 +68,15 @@ export class LetterController {
     return this.letterService.handleProcessingCallback(body);
   }
 
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a single letter by id (Admin only)' })
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  findOne(@Param('id') id: string) {
+    return this.letterService.findOne(id);
+  }
+
   @Patch(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a letter details' })
