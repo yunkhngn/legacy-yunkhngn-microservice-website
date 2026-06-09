@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas.gemini import (
     GenerateTextRequest, ProjectInfoRequest, BlogContentRequest,
-    DashboardSummaryRequest, ChatRequest, TarotReadingRequest,
+    DashboardSummaryRequest, ChatRequest,
 )
 from app.services import gemini_service, github_service
 
@@ -92,17 +92,3 @@ async def chat(
         logger.error(f"chat failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/tarot")
-async def generate_tarot_reading(
-    req: TarotReadingRequest,
-    x_gemini_api_key: Optional[str] = Header(None)
-):
-    try:
-        cards = [{"name": c.name, "description": c.description} for c in req.cards]
-        analysis = await gemini_service.generate_tarot_reading(
-            req.question, cards, x_gemini_api_key
-        )
-        return {"analysis": analysis}
-    except Exception as e:
-        logger.error(f"generate_tarot_reading failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
