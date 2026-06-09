@@ -88,8 +88,11 @@ export class LastFmService implements OnModuleInit {
       await this.cacheManager.set(cacheKey, result, 30);
 
       return result;
-    } catch (error) {
-      this.logger.error('Failed to fetch Last.fm data', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch Last.fm data: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }

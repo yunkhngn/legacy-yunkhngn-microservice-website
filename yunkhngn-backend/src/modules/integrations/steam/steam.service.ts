@@ -91,8 +91,11 @@ export class SteamService {
       // TTL in seconds
       await this.cacheManager.set(cacheKey, result, CACHE_TTL_SECONDS);
       return result;
-    } catch (error) {
-      this.logger.error('Failed to fetch Steam data', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch Steam data: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }
