@@ -74,7 +74,7 @@ describe('AiService', () => {
         json: () => Promise.resolve(mockResult),
       } as unknown as Response);
 
-      const result = await service.whatToEat({ lat: 21.02, lon: 105.85, timezone: 'Asia/Ho_Chi_Minh' });
+      const result = await service.whatToEat({ location: 'Hà Nội', timezone: 'Asia/Ho_Chi_Minh' });
 
       expect(mockSettingsService.getDecryptedSetting).toHaveBeenCalledWith('openweather_api_key');
       expect(global.fetch).toHaveBeenCalledWith(
