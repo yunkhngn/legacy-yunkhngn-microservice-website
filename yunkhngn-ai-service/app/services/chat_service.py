@@ -17,7 +17,7 @@ def _get_client(api_key: str | None = None):
 class ChatService:
     def __init__(self):
         self.persona = self._load_persona()
-        self.model_name = "gemini-3-flash-preview"
+        self.model_name = get_settings().ai_model
 
     def _load_persona(self):
         persona_path = os.path.join(os.getcwd(), "app", "data", "persona.json")
@@ -98,7 +98,7 @@ FINAL RULES:
         lower_msg = message.lower()
         return any(kw in lower_msg for kw in tarot_keywords)
 
-    async def get_chat_response(self, message: str, history: list, language: str = "vi", api_key: str | None = None, persona_override: dict | None = None):
+    async def get_chat_response(self, message: str, history: list, language: str = "vi", api_key: str | None = None, persona_override: dict | None = None, model: str | None = None):
         # 1. Search RAG for context
         context_results = await rag_service.search(message, top_k=5, api_key=api_key)
         
@@ -124,7 +124,7 @@ FINAL RULES:
         # 4. Call Gemini
         client = _get_client(api_key)
         response = client.models.generate_content(
-            model=self.model_name,
+            model=model or self.model_name or get_settings().ai_model,
             contents=contents
         )
         

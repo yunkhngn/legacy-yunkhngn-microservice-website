@@ -101,7 +101,8 @@ async def public_chat(
             history=[{"role": m.role, "content": m.content} for m in request.history],
             language=request.language,
             api_key=x_gemini_api_key,
-            persona_override=request.persona
+            persona_override=request.persona,
+            model=x_gemini_model,
         )
         return {
             "text": result["text"],
