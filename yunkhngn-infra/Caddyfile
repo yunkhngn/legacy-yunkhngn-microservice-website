@@ -23,7 +23,7 @@ api.yunkhngn.dev {
     }
     respond @blocked_agents 403
     @bull_board path /admin/queues /admin/queues/*
-    basicauth @bull_board {
+    basic_auth @bull_board {
         admin $2y$14$jW7AUqWsv02XBImicoekp.pw7ZgnS0BmaTw7J3n5418ykXvOwYhYO
     }
     
