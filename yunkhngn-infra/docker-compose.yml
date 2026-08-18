@@ -97,6 +97,15 @@ services:
     networks:
       - app-network
 
+  frontend:
+    image: ghcr.io/yunkhngn/yunkhngn-frontend:latest
+    container_name: yunkhngn-frontend
+    restart: always
+    env_file:
+      - ./env-fe
+    networks:
+      - app-network
+
   caddy:
     image: caddy:2-alpine
     container_name: yunkhngn-caddy
@@ -112,6 +121,7 @@ services:
       - app-network
     depends_on:
       - backend
+      - frontend
 
 networks:
   app-network:

@@ -29,3 +29,20 @@ api.yunkhngn.dev {
     
     reverse_proxy backend:3001
 }
+
+# Main Frontend Domain
+yunkhngn.dev, www.yunkhngn.dev {
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Redirect www.yunkhngn.dev to yunkhngn.dev
+    @www host www.yunkhngn.dev
+    redir @www https://yunkhngn.dev{uri} permanent
+
+    reverse_proxy frontend:3000
+}
