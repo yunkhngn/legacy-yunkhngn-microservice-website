@@ -23,7 +23,7 @@ class TestGetCurrentWeather:
             mock_client.get = AsyncMock(return_value=mock_response)
             mock_client_cls.return_value = mock_client
 
-            result = await get_current_weather(lat=21.0285, lon=105.8542, api_key="test-key")
+            result = await get_current_weather(location="Hà Nội", api_key="test-key")
 
         assert result["weather_description"] == "mây thưa"
         assert result["temperature_c"] == 32.5
@@ -41,4 +41,4 @@ class TestGetCurrentWeather:
             mock_client_cls.return_value = mock_client
 
             with pytest.raises(httpx.HTTPStatusError):
-                await get_current_weather(lat=21.0285, lon=105.8542, api_key="test-key")
+                await get_current_weather(location="Hà Nội", api_key="test-key")
