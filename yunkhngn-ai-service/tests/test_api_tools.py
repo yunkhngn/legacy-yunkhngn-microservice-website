@@ -26,7 +26,7 @@ class TestWhatToEatEndpoint:
             resp = client.post(
                 "/api/v1/tools/what-to-eat",
                 headers={"x-openweather-api-key": "test-key"},
-                json={"lat": 21.0285, "lon": 105.8542, "timezone": "Asia/Ho_Chi_Minh"},
+                json={"location": "Hà Nội", "timezone": "Asia/Ho_Chi_Minh"},
             )
 
         assert resp.status_code == 200
@@ -41,7 +41,7 @@ class TestWhatToEatEndpoint:
     def test_returns_400_when_api_key_missing(self, client):
         resp = client.post(
             "/api/v1/tools/what-to-eat",
-            json={"lat": 21.0285, "lon": 105.8542, "timezone": "Asia/Ho_Chi_Minh"},
+            json={"location": "Hà Nội", "timezone": "Asia/Ho_Chi_Minh"},
         )
         assert resp.status_code == 400
 
@@ -53,6 +53,6 @@ class TestWhatToEatEndpoint:
             resp = client.post(
                 "/api/v1/tools/what-to-eat",
                 headers={"x-openweather-api-key": "test-key"},
-                json={"lat": 21.0285, "lon": 105.8542, "timezone": "Asia/Ho_Chi_Minh"},
+                json={"location": "Hà Nội", "timezone": "Asia/Ho_Chi_Minh"},
             )
         assert resp.status_code == 503
