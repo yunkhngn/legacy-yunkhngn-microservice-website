@@ -1,0 +1,269 @@
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SettingsService } from '../../settings/settings.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+
+/** Minimal surface used by this service (Octokit instance). */
+type OctokitClient = {
+  request: (
+    route: string,
+    parameters?: Record<string, unknown>,
+  ) => Promise<{ data: unknown }>;
+};
+
+type WorkflowRunsPayload = {
+  workflow_runs: Array<{
+    id: number;
+    name: string;
+    status: string;
+    conclusion?: string;
+    created_at: string;
+    updated_at: string;
+    html_url: string;
+    run_number: number;
+    display_title?: string;
+    actor?: { login?: string; avatar_url?: string };
+  }>;
+};
+
+type UserEventItem = {
+  type: string;
+  public: boolean;
+  created_at: string;
+  repo: { name: string };
+};
+
+@Injectable()
+export class GithubService {
+  private octokit?: OctokitClient;
+  /** Cache key = token string or '__public__' so DB/env token updates refresh the client */
+  private clientCacheKey?: string;
+  private readonly logger = new Logger(GithubService.name);
+
+  constructor(
+    private configService: ConfigService,
+    private settingsService: SettingsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
+
+  private async resolveToken(): Promise<string> {
+    return (
+      (await this.settingsService.getDecryptedSetting('github_api_key')) ||
+      this.configService.get<string>('GITHUB_API_KEY') ||
+      ''
+    );
+  }
+
+  /**
+   * Returns an Octokit instance. Uses token from DB/env on each call (cached per token value).
+   * Without a token, uses unauthenticated client (stricter rate limits; OK for public repo lists).
+   */
+  private async getOctokit(): Promise<OctokitClient | undefined> {
+    const token = await this.resolveToken();
+    const cacheKey = token || '__public__';
+    if (this.octokit && this.clientCacheKey === cacheKey) {
+      return this.octokit;
+    }
+    try {
+      const { Octokit } = await eval('import("octokit")');
+      this.octokit = (
+        token ? new Octokit({ auth: token }) : new Octokit()
+      ) as OctokitClient;
+      this.clientCacheKey = cacheKey;
+      if (!token) {
+        this.logger.debug(
+          'GitHub: no API token; using unauthenticated requests (lower rate limits).',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to load Octokit', error);
+      this.octokit = undefined;
+      this.clientCacheKey = undefined;
+      return undefined;
+    }
+    return this.octokit;
+  }
+
+  private async getUsername() {
+    return (
+      (await this.settingsService.getDecryptedSetting('github_username')) ||
+      this.configService.get<string>('GITHUB_USERNAME')
+    );
+  }
+
+  private async getRepoName() {
+    return (
+      (await this.settingsService.getDecryptedSetting('github_repo_name')) ||
+      this.configService.get<string>('GITHUB_REPO_NAME')
+    );
+  }
+
+  async getPublicRepos() {
+    const cacheKey = 'github_public_repos';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
+    const username = await this.getUsername();
+    if (!username) {
+      this.logger.warn(
+        'GitHub username not configured (settings github_username or GITHUB_USERNAME). Cannot list repos.',
+      );
+      return [];
+    }
+    const octokit = await this.getOctokit();
+    if (!octokit) return [];
+
+    const listPublicRepos = (client: OctokitClient) =>
+      client.request('GET /users/{username}/repos', {
+        username,
+        sort: 'updated',
+        per_page: 10,
+        type: 'public',
+      });
+
+    try {
+      const { data } = await listPublicRepos(octokit);
+      const result = Array.isArray(data) ? data : [];
+      await this.cacheManager.set(cacheKey, result, 120);
+      return result;
+    } catch (error: unknown) {
+      const status =
+        error && typeof error === 'object' && 'status' in error
+          ? (error as { status: number }).status
+          : undefined;
+      const hadToken = Boolean(await this.resolveToken());
+      if (status === 401 && hadToken) {
+        this.logger.warn(
+          'GitHub returned 401 Bad credentials for stored token. Listing public repos without auth (regenerate github_api_key / PAT if you need authenticated access).',
+        );
+        try {
+          const { Octokit } = await eval('import("octokit")');
+          const anon = new Octokit() as OctokitClient;
+          const { data } = await listPublicRepos(anon);
+          const result = Array.isArray(data) ? data : [];
+          await this.cacheManager.set(cacheKey, result, 120);
+          return result;
+        } catch (fallbackErr) {
+          this.logger.error(
+            'Failed to fetch public repos (anonymous fallback)',
+            fallbackErr,
+          );
+          return [];
+        }
+      }
+      this.logger.error('Failed to fetch public repos', error);
+      return [];
+    }
+  }
+
+  async getWorkflowRuns() {
+    const username = await this.getUsername();
+    const repoName = await this.getRepoName();
+
+    const octokit = await this.getOctokit();
+    if (!octokit || !username || !repoName) return [];
+    const token = await this.resolveToken();
+    if (!token) {
+      this.logger.warn(
+        'GitHub Actions workflows require an API token with repo scope.',
+      );
+      return [];
+    }
+    try {
+      const { data: raw } = await octokit.request(
+        'GET /repos/{owner}/{repo}/actions/runs',
+        {
+          owner: username,
+          repo: repoName,
+          per_page: 5,
+        },
+      );
+      const data = raw as WorkflowRunsPayload;
+      return data.workflow_runs.map((run) => ({
+        id: run.id,
+        name: run.name,
+        status: run.status,
+        conclusion: run.conclusion,
+        created_at: run.created_at,
+        updated_at: run.updated_at,
+        html_url: run.html_url,
+        run_number: run.run_number,
+        display_title: run.display_title,
+        actor: {
+          login: run.actor?.login,
+          avatar_url: run.actor?.avatar_url,
+        },
+        duration:
+          run.updated_at && run.created_at
+            ? new Date(run.updated_at).getTime() -
+              new Date(run.created_at).getTime()
+            : 0,
+      }));
+    } catch (error: unknown) {
+      const status =
+        error && typeof error === 'object' && 'status' in error
+          ? (error as { status: number }).status
+          : undefined;
+      if (status === 404) {
+        this.logger.warn(
+          `Repository ${username}/${repoName} not found or token lacks permissions. Check GITHUB_REPO_NAME and token scopes.`,
+        );
+      } else {
+        this.logger.error('Failed to fetch workflow runs', error);
+      }
+      return [];
+    }
+  }
+
+  async getLatestActivity() {
+    const cacheKey = 'github_latest_activity';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
+    const username = await this.getUsername();
+    if (!username) return null;
+
+    const octokit = await this.getOctokit();
+    if (!octokit) return null;
+
+    try {
+      const { data: raw } = await octokit.request(
+        'GET /users/{username}/events',
+        {
+          username,
+          per_page: 10,
+        },
+      );
+
+      const data = Array.isArray(raw) ? (raw as UserEventItem[]) : [];
+      const relevantEvent = data.find((e) =>
+        [
+          'PushEvent',
+          'PullRequestEvent',
+          'WatchEvent',
+          'CreateEvent',
+          'IssuesEvent',
+        ].includes(e.type),
+      );
+
+      if (!relevantEvent) return null;
+
+      const isPrivate = !relevantEvent.public;
+
+      const result = {
+        type: relevantEvent.type,
+        repo: isPrivate ? 'Private Repository' : relevantEvent.repo.name,
+        isPrivate,
+        timestamp: relevantEvent.created_at,
+        url: isPrivate ? null : `https://github.com/${relevantEvent.repo.name}`,
+      };
+
+      await this.cacheManager.set(cacheKey, result, 60);
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to fetch user events', error);
+      return null;
+    }
+  }
+}

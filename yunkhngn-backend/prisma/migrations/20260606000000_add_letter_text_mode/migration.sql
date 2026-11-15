@@ -1,0 +1,21 @@
+BEGIN TRY
+
+BEGIN TRAN;
+
+-- AlterTable
+ALTER TABLE [dbo].[letters] ADD [kind] NVARCHAR(1000) NOT NULL CONSTRAINT [letters_kind_df] DEFAULT 'scan';
+ALTER TABLE [dbo].[letters] ADD [font] NVARCHAR(1000);
+ALTER TABLE [dbo].[letters] ADD [contentJSON] NVARCHAR(max);
+
+COMMIT TRAN;
+
+END TRY
+BEGIN CATCH
+
+IF @@TRANCOUNT > 0
+BEGIN
+    ROLLBACK TRAN;
+END;
+THROW
+
+END CATCH
