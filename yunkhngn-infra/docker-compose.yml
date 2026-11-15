@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_API_VERSION=1.41
+      - WATCHTOWER_DEBUG=false
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=60
+      - REPO_USER=yunkhngn
+      - REPO_PASS=${GHCR_TOKEN}
+    restart: unless-stopped
+
+  monitor-agent:
+    build: ./monitor-agent
+    container_name: yunkhngn-monitor
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  redis:
+    image: redis:alpine
+    container_name: yunkhngn-redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  mssql:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: yunkhngn-mssql
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./backups:/var/opt/mssql/backups
+    networks:
+      - app-network
+
+  backend:
+    image: ghcr.io/yunkhngn/yunkhngn-backend:latest
+    container_name: yunkhngn-backend
+    restart: always
+    env_file:
+      - ./env-be
+    environment:
+      - REDIS_HOST=redis
+      - FRONTEND_URL=https://yunkhngn.dev
+      - LETTER_AI_URL=http://ai-service:8000
+      - AUTH_SERVICE_URL=http://auth-service:3002
+      - MONITOR_AGENT_URL=http://monitor-agent:9100
+      - SELF_URL=http://backend:3001
+    ports:
+      - "3001:3001"
+    networks:
+      - app-network
+    volumes:
+      - ./firebase-admin-sdk.json:/app/firebase-admin-sdk.json
+    depends_on:
+      - mssql
+      - ai-service
+      - auth-service
+
+  auth-service:
+    image: ghcr.io/yunkhngn/yunkhngn-auth:latest
+    container_name: yunkhngn-auth
+    restart: always
+    env_file:
+      - ./env-auth
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - ./firebase-admin-sdk.json:/app/firebase-admin-sdk.json
+    networks:
+      - app-network
+    depends_on:
+      - mssql
+
+  ai-service:
+    image: ghcr.io/yunkhngn/yunkhngn-ai-service:latest
+    container_name: yunkhngn-ai-service
+    restart: always
+    env_file:
+      - ./env-ai
+    volumes:
+      - chroma_data:/app/data/chroma
+    networks:
+      - app-network
+
+  frontend:
+    image: ghcr.io/yunkhngn/yunkhngn-frontend:latest
+    container_name: yunkhngn-frontend
+    restart: always
+    env_file:
+      - ./env-fe
+    networks:
+      - app-network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: yunkhngn-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app-network
+    depends_on:
+      - backend
+      - frontend
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  chroma_data:
+  mssql_data:
+    external: true
+    name: yunkhngn-website_mssql_data
+  caddy_data:
+  caddy_config:

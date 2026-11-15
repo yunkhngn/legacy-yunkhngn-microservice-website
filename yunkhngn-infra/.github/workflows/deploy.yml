@@ -1,0 +1,32 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /apps/yunkhngn-infra
+            git pull origin main
+            
+            # Login to GHCR (nếu cần để pull image private)
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Khởi động lại các service với cấu hình mới, tự động build lại nếu code thay đổi
+            docker compose up -d --build --remove-orphans
+            
+            # Dọn dẹp các image cũ (optional nhưng nên làm)
+            docker image prune -f

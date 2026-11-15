@@ -1,0 +1,48 @@
+# API Subdomain
+api.yunkhngn.dev {
+    # ── Security Headers ──
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        # Remove server info
+        -Server
+    }
+
+    # ── Block path traversal & common attack patterns ──
+    @blocked_paths {
+        path_regexp blocked (?i)(\.\.|\.\./|\.env|wp-admin|wp-login|wp-content|phpmyadmin|\.git|\.htaccess|etc/passwd|etc/shadow|proc/self|/debug|/actuator|/console)
+    }
+    respond @blocked_paths 403
+
+    # ── Block scanner user agents ──
+    @blocked_agents {
+        header_regexp User-Agent (?i)(nikto|sqlmap|nmap|dirsearch|gobuster|masscan|zgrab|nuclei|httpie|curl/|python-requests|go-http-client|java/|nessus|openvas|acunetix|burpsuite|wpscan|semrush|ahref)
+    }
+    respond @blocked_agents 403
+    @bull_board path /admin/queues /admin/queues/*
+    basic_auth @bull_board {
+        admin $2y$14$jW7AUqWsv02XBImicoekp.pw7ZgnS0BmaTw7J3n5418ykXvOwYhYO
+    }
+    
+    reverse_proxy backend:3001
+}
+
+# Main Frontend Domain
+yunkhngn.dev, www.yunkhngn.dev {
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Redirect www.yunkhngn.dev to yunkhngn.dev
+    @www host www.yunkhngn.dev
+    redir @www https://yunkhngn.dev{uri} permanent
+
+    reverse_proxy frontend:3000
+}
