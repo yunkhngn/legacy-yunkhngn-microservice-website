@@ -49,5 +49,3 @@ firebase-admin-sdk.json
 !.vscode/extensions.json
 *.sublime-workspace
 
-# Local git backup directory (preserves pre-merge submodule .git folders)
-.git_backup_originals/
