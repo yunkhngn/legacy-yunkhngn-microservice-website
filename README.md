@@ -3,12 +3,13 @@
 > Archived monorepo containing the complete microservice architecture for **[yunkhngn.dev](https://yunkhngn.dev)** — a personal portfolio, blog, photography showcase, and interactive handwritten letter platform.
 
 [![Status](https://img.shields.io/badge/status-archived-orange.svg)]()
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![Architecture](https://img.shields.io/badge/architecture-microservices-blue.svg)]()
 [![Orchestration](https://img.shields.io/badge/deploy-Docker%20Compose%20%2B%20Caddy-informational.svg)]()
 
 ---
 
-## 🏛 System Architecture
+## System Architecture
 
 The application is decomposed into dedicated microservices communicating over an internal Docker network, reverse-proxied by Caddy with automatic TLS and security filtering.
 
@@ -71,7 +72,7 @@ flowchart TD
 
 ---
 
-## 📦 Services Breakdown
+## Services Breakdown
 
 | Directory | Service | Stack | Description |
 |:---|:---|:---|:---|
@@ -83,7 +84,7 @@ flowchart TD
 
 ---
 
-## 📚 Service Highlights
+## Service Highlights
 
 ### 1. `yunkhngn-frontend`
 - **Modern App Router**: Built with React 19 and Next.js 15 featuring server-side rendering, streaming, and metadata SEO generation.
@@ -112,7 +113,7 @@ flowchart TD
 
 ---
 
-## 🚀 Running Locally
+## Running Locally
 
 ### Prerequisites
 - [Docker](https://www.docker.com/) and Docker Compose
@@ -180,7 +181,7 @@ Each service can be run independently during local development:
 
 ---
 
-## 🗃 Git History & Monorepo Consolidation Note
+## Git History & Monorepo Consolidation Note
 
 This repository is a consolidated monorepo created for archiving. Previously, each subfolder was an independent Git repository with its own deployment pipeline:
 
@@ -194,7 +195,8 @@ All individual histories (>1,700 commits in total), author attributions, commit 
 
 ---
 
-## 📄 License & Credits
+## License & Credits
 
 Author: **@yunkhngn**  
+This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](./LICENSE).  
 Archived for portfolio showcase and reference.
