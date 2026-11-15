@@ -1,0 +1,263 @@
+'use client';
+
+import { useState } from 'react';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import { Badge } from '@/components/ui/Badge';
+import { Search, Github, ExternalLink, Star, GitFork, FolderOpen } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { m as motion } from 'framer-motion';
+import PageHero from '@/components/shared/PageHero';
+import RevealHeading from '@/components/home/RevealHeading';
+import TiltCard from '@/components/home/TiltCard';
+
+const cardContainerVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } },
+};
+
+const cardItemVariants = {
+    hidden: { opacity: 0, y: 24 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
+
+export default function ProjectList({ projects = [], repos = [] }) {
+    const [search, setSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    const [selectedTag, setSelectedTag] = useState(null);
+
+    const allTags = [...new Set([...projects, ...repos].flatMap(item => item.tags ? item.tags.split(',').map(t => t.trim()) : []))];
+
+    const filterItems = (items) => {
+        return items.filter(item => {
+            const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
+            const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
+            const matchesTag = selectedTag ? itemTags.includes(selectedTag) : true;
+            return matchesSearch && matchesTag;
+        });
+    };
+
+    const filteredProjects = filterItems(projects);
+    const filteredRepos = filterItems(repos);
+
+    const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+    const paginatedProjects = filteredProjects.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const handleSearchChange = (event) => {
+        setSearch(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleTagSelect = (tag) => {
+        setSelectedTag(tag);
+        setCurrentPage(1);
+    };
+
+    const isFiltering = search.length > 0 || selectedTag !== null;
+
+    return (
+        <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">
+            {/* Hero Section */}
+            <PageHero
+                eyebrow="Hard-working Developer"
+                title="Projects & Open Source"
+                description="A collection of my work, side projects, and open source contributions."
+                className="mb-20"
+            >
+                <div className="w-full max-w-md flex gap-2 mt-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                        <Input
+                            placeholder="Search projects and repos..."
+                            value={search}
+                            onChange={handleSearchChange}
+                            className="pl-10 h-10"
+                        />
+                    </div>
+                </div>
+            </PageHero>
+
+
+            {/* Explore Topics */}
+            {
+                allTags.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 mb-16 max-w-3xl mx-auto">
+                        <Button
+                            variant={selectedTag === null ? "default" : "outline"}
+                            onClick={() => handleTagSelect(null)}
+                            className="rounded-full text-sm h-8"
+                        >
+                            All
+                        </Button>
+                        {allTags.map(tag => (
+                            <Button
+                                key={tag}
+                                variant={selectedTag === tag ? "default" : "outline"}
+                                onClick={() => handleTagSelect(tag === selectedTag ? null : tag)}
+                                className="rounded-full text-sm h-8"
+                            >
+                                {tag}
+                            </Button>
+                        ))}
+                    </div>
+                )
+            }
+
+            <div className="space-y-20">
+                    {/* Projects Section */}
+                    <section>
+                        <RevealHeading index={1}>
+                            <h2 className="text-3xl font-bold flex items-center gap-3">
+                                {isFiltering ? 'Project Results' : 'Featured Projects'}
+                            </h2>
+                        </RevealHeading>
+                        {filteredProjects.length > 0 ? (
+                            <>
+                                <motion.div
+                                    key={`projects-${currentPage}-${selectedTag || 'all'}-${search}`}
+                                    variants={cardContainerVariants}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true }}
+                                    className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12"
+                                >
+                                    {paginatedProjects.map((project) => (
+                                        <motion.div key={project.id} variants={cardItemVariants}>
+                                            <TiltCard>
+                                                <Link
+                                                    href={`/project/${project.slug || project.id}`}
+                                                    className="group flex flex-col gap-4"
+                                                >
+                                                    <div className="aspect-video relative bg-muted overflow-hidden rounded-2xl border">
+                                                        {project.cover ? (
+                                                            <Image
+                                                                src={project.cover}
+                                                                alt={project.title}
+                                                                fill
+                                                                sizes="(max-width: 768px) 100vw, 50vw"
+                                                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex items-center justify-center h-full text-muted-foreground bg-secondary/30">
+                                                                <span>No Preview</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            {project.repoLink && (
+                                                                <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-sm" onClick={(e) => { e.preventDefault(); window.open(project.repoLink, '_blank'); }}>
+                                                                    <Github className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            {project.demoLink && (
+                                                                <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-sm" onClick={(e) => { e.preventDefault(); window.open(project.demoLink, '_blank'); }}>
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <h2 className="text-2xl font-bold group-hover:text-primary transition-colors leading-tight">
+                                                            {project.title}
+                                                        </h2>
+                                                        <p className="text-muted-foreground line-clamp-2 text-base">{project.description}</p>
+                                                        <div className="flex flex-wrap gap-2 mt-auto">
+                                                            {project.tags && project.tags.split(',').map((tag, i) => (
+                                                                <span key={`tag-${i}`} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-md font-medium">{tag.trim()}</span>
+                                                            ))}
+                                                            {Array.isArray(project.techStack) && project.techStack.slice(0, 4).map((tech, i) => (
+                                                                <span key={i} className="text-xs border px-2 py-1 rounded-md font-medium text-muted-foreground">{tech}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </TiltCard>
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
+                                <div className="mt-12">
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-10 text-muted-foreground border rounded-xl border-dashed">
+                                <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                No projects found matching your search.
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Open Source Section */}
+                    <section>
+                        <RevealHeading index={2}>
+                            <h2 className="text-3xl font-bold flex items-center gap-3">
+                                <Github className="h-8 w-8" />
+                                {isFiltering ? 'Repository Results' : 'Open Source Contributions'}
+                            </h2>
+                        </RevealHeading>
+                        {filteredRepos.length > 0 ? (
+                            <motion.div
+                                key={`repos-${selectedTag || 'all'}-${search}`}
+                                variants={cardContainerVariants}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={{ once: true }}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            >
+                                {filteredRepos.map((repo) => (
+                                    <motion.div key={repo.id} variants={cardItemVariants}>
+                                        <a
+                                            href={repo.repoLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group block h-full"
+                                        >
+                                            <div className="h-full border rounded-xl p-6 hover:border-primary transition-colors bg-card flex flex-col">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                                                        {repo.title}
+                                                    </h3>
+                                                    <Badge variant="secondary" className="font-normal text-xs">
+                                                        {repo.techStack[0] || 'Code'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-muted-foreground text-sm line-clamp-3 mb-6 flex-1">
+                                                    {repo.description}
+                                                </p>
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-auto">
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="h-4 w-4 text-yellow-500" />
+                                                        {repo.stars}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <GitFork className="h-4 w-4 text-blue-500" />
+                                                        {repo.forks}
+                                                    </div>
+                                                    <div className="ml-auto">
+                                                        <ExternalLink className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        ) : (
+                            <div className="text-center py-10 text-muted-foreground border rounded-xl border-dashed">
+                                No repositories found matching your search.
+                            </div>
+                        )}
+                    </section>
+            </div>
+        </div>
+    );
+}

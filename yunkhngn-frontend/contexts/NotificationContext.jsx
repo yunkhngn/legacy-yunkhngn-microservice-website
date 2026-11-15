@@ -1,0 +1,139 @@
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { readNestJson } from '@/lib/api/readJson';
+import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
+
+const NotificationContext = createContext();
+
+export function useNotification() {
+    return useContext(NotificationContext);
+}
+
+export function NotificationProvider({ children }) {
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const { user } = useAuth();
+    const userRef = useRef(user);
+
+    // Keep userRef in sync with user
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
+
+    // Notifications are admin-only. Skip the socket entirely for public visitors
+    // and non-admin users so they don't open a persistent connection to the VPS.
+    const isAdmin = user?.role === 'ADMIN';
+    useEffect(() => {
+        if (!isAdmin) return undefined;
+
+        let socket = null;
+        let cancelled = false;
+
+        // Dynamic import keeps socket.io-client out of the public bundle;
+        // only admins ever reach this code path.
+        import('socket.io-client').then(({ io }) => {
+            if (cancelled) return;
+
+            const startUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const socketUrl = startUrl.replace(/\/api$/, '');
+
+            socket = io(socketUrl, {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5,
+            });
+
+            socket.on('connect_error', (error) => {
+                console.warn('Socket connection error:', error.message);
+            });
+
+            socket.on('newNotification', (notification) => {
+                setNotifications((prev) => [notification, ...prev]);
+                setUnreadCount((prev) => prev + 1);
+                toast(notification.message, {
+                    action: {
+                        label: 'View',
+                        onClick: () => window.location.href = notification.link || '/admin/notifications',
+                    },
+                });
+            });
+        });
+
+        return () => {
+            cancelled = true;
+            socket?.disconnect();
+        };
+    }, [isAdmin]);
+
+    const fetchNotifications = useCallback(async () => {
+        const currentUser = userRef.current;
+        if (!currentUser) return;
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications?limit=5`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+                const data = await readNestJson(res);
+                setNotifications(data.data);
+                setUnreadCount(data.meta.unreadCount);
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    }, []);
+
+    // Trigger fetch when user UID changes (login/logout/switch)
+    const uid = user?.uid;
+    useEffect(() => {
+        if (uid) {
+            fetchNotifications();
+        }
+    }, [uid, fetchNotifications]);
+
+    const markAsRead = useCallback(async (id) => {
+        const currentUser = userRef.current;
+        if (!currentUser) return;
+        try {
+            const token = await currentUser.getIdToken();
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/read`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Failed to mark as read', error);
+        }
+    }, []);
+
+    const markAllAsRead = useCallback(async () => {
+        const currentUser = userRef.current;
+        if (!currentUser) return;
+        try {
+            const token = await currentUser.getIdToken();
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/read-all`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Failed to mark all as read', error);
+        }
+    }, []);
+
+    const value = useMemo(() => ({
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllAsRead,
+        fetchNotifications,
+    }), [notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications]);
+
+    return (
+        <NotificationContext.Provider value={value}>
+            {children}
+        </NotificationContext.Provider>
+    );
+}

@@ -1,0 +1,219 @@
+import { useState } from 'react';
+import { readNestJson } from '@/lib/api/readJson';
+import { Button } from '@/components/ui/Button';
+import { ThumbsUp, ThumbsDown, Reply } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+import ReportModal from './ReportModal';
+import DeleteCommentModal from './DeleteCommentModal';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
+
+export default function Comment({ comment, onUpdate, onDelete, onReply, onMentionClick }) {
+    const { user } = useAuth();
+    const [voting, setVoting] = useState(false);
+    const [userVote, setUserVote] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const isOwner = user && comment.uid === user.uid;
+    const isAdmin = user && user.role === 'ADMIN';
+    const isCommentAdmin = comment.user?.role === 'ADMIN';
+
+    const handleVote = async (value) => {
+        if (!user) {
+            toast.error('Please sign in to vote');
+            return;
+        }
+
+        setVoting(true);
+        try {
+            const token = await user.getIdToken(true);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${comment.id}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ value }),
+            });
+
+            if (!res.ok) throw new Error('Failed to vote');
+
+            const updatedComment = await readNestJson(res);
+            onUpdate(updatedComment);
+
+            // Toggle vote state
+            if (userVote === value) {
+                setUserVote(null);
+            } else {
+                setUserVote(value);
+            }
+        } catch (error) {
+            console.error('Error voting:', error);
+            toast.error('Failed to vote');
+        } finally {
+            setVoting(false);
+        }
+    };
+
+    const handleReport = async (commentId, reason, tokenOverride) => {
+        if (!user && !tokenOverride) {
+            toast.error('Please sign in to report');
+            throw new Error('Not signed in');
+        }
+
+        try {
+            const token = tokenOverride || await user.getIdToken(true);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${commentId}/report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ reason }),
+            });
+
+            if (!res.ok) {
+                const error = await readNestJson(res);
+                throw new Error(error.message || 'Failed to report');
+            }
+
+            toast.success('Comment reported');
+        } catch (error) {
+            console.error('Error reporting:', error);
+            toast.error(error.message || 'Failed to report comment');
+            throw error;
+        }
+    };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const token = await user.getIdToken(true);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${comment.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!res.ok) throw new Error('Failed to delete');
+
+            toast.success('Comment deleted');
+            onDelete(comment.id);
+        } catch (error) {
+            console.error('Error deleting:', error);
+            toast.error('Failed to delete comment');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const renderContent = (content) => {
+        if (!content) return null;
+
+        // Split by spaces but keep delimiters to preserve structure
+        const parts = content.split(/(\s+)/);
+
+        return parts.map((part, index) => {
+            if (part.startsWith('@') && part.length > 1) {
+                const username = part.substring(1);
+                return (
+                    <span
+                        key={index}
+                        className="text-blue-500 font-medium cursor-pointer hover:underline"
+                        onClick={() => onMentionClick && onMentionClick(username)}
+                    >
+                        {part.replace(/_/g, ' ')}
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
+    return (
+        <div
+            id={`comment-${comment.id}`}
+            className="border-b border-border pb-4 last:border-0 flex gap-4 transition-colors duration-500 rounded-lg p-2"
+        >
+            <Avatar className="h-10 w-10 flex-shrink-0 border border-border/50">
+                <AvatarImage 
+                    src={isCommentAdmin ? (comment.user?.avatarUrl || "https://cataas.com/cat") : "https://cataas.com/cat"} 
+                    alt={comment.displayName} 
+                />
+                <AvatarFallback className={isCommentAdmin ? "bg-primary/10 text-primary" : ""}>
+                    {comment.displayName?.[0]?.toUpperCase() || '?'}
+                </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 space-y-2 min-w-0">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">{comment.displayName}</span>
+                            {isCommentAdmin && (
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                                    AUTHOR
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        {(isOwner || isAdmin) && (
+                            <DeleteCommentModal onConfirm={handleDelete} loading={deleting} />
+                        )}
+                    </div>
+                </div>
+
+                <p className="text-foreground whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere' }}>
+                    {renderContent(comment.content)}
+                </p>
+
+                <div className="flex items-center gap-1 md:gap-4 flex-wrap">
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVote(1)}
+                            disabled={voting}
+                            className={`px-2 ${userVote === 1 ? 'text-primary' : ''}`}
+                        >
+                            <ThumbsUp className="h-4 w-4 md:mr-1" />
+                            <span className="hidden md:inline">{comment.upvoteCount || 0}</span>
+                            <span className="md:hidden ml-1">{comment.upvoteCount || 0}</span>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVote(-1)}
+                            disabled={voting}
+                            className={`px-2 ${userVote === -1 ? 'text-primary' : ''}`}
+                        >
+                            <ThumbsDown className="h-4 w-4 md:mr-1" />
+                            <span className="hidden md:inline">{comment.downvoteCount || 0}</span>
+                            <span className="md:hidden ml-1">{comment.downvoteCount || 0}</span>
+                        </Button>
+                    </div>
+
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onReply && onReply(comment.displayName)}
+                        className="text-muted-foreground hover:text-foreground px-2"
+                    >
+                        <Reply className="h-4 w-4 md:mr-1" />
+                        <span className="hidden md:inline">Reply</span>
+                    </Button>
+
+                    {!isOwner && !isCommentAdmin && (
+                        <ReportModal commentId={comment.id} onReport={handleReport} />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
